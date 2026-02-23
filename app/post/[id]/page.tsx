@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { getCategoryById } from "@/lib/categories";
 import { isAnonymousCategory, getAnonymousDisplayName } from "@/lib/anonymous";
 import ShareButtons from "@/components/ShareButtons";
+import FeaturedImage from "@/components/FeaturedImage";
 
 function renderPostBody(body: string): string {
   const escaped = body
@@ -78,7 +79,7 @@ export default async function PostPage({ params }: Props) {
         ← Back to {cat?.child.name || "category"}
       </Link>
       {post.featuredImageUrl && (
-        <img
+        <FeaturedImage
           src={post.featuredImageUrl}
           alt=""
           style={{

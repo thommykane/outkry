@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { isAnonymousCategory, getAnonymousDisplayName } from "@/lib/anonymous";
+import FeaturedImage from "@/components/FeaturedImage";
 
 export default function PostImageCard({ post, currentUserId }: { post: any; currentUserId?: string | null }) {
   const [score, setScore] = useState(post.score ?? 0);
@@ -56,7 +57,7 @@ export default function PostImageCard({ post, currentUserId }: { post: any; curr
         }}
       >
         {post.featuredImageUrl ? (
-          <img
+          <FeaturedImage
             src={post.featuredImageUrl}
             alt={post.title}
             style={{

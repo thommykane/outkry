@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { isAnonymousCategory, getAnonymousDisplayName } from "@/lib/anonymous";
+import FeaturedImage from "@/components/FeaturedImage";
 
 const MAX_EXCERPT_CHARS = 300;
 
@@ -98,7 +99,7 @@ export default function PostRow({ post, currentUserId }: { post: any; currentUse
           }}
         >
           {post.featuredImageUrl ? (
-            <img
+            <FeaturedImage
               src={post.featuredImageUrl}
               alt=""
               style={{
