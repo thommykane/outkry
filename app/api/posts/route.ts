@@ -5,6 +5,8 @@ import { eq, desc, asc, and, gte, sql } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { uploadToFtp, isFtpConfigured } from "@/lib/ftp-upload";
+import { uploadToBlob, isBlobConfigured } from "@/lib/blob-upload";
 
 const POSTS_PER_PAGE = 20;
 const MAX_PAGES = 10;
@@ -132,13 +134,19 @@ export async function POST(req: NextRequest) {
     if (file && file.size > 0) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const dir = path.join(process.cwd(), "public", "uploads");
-      await mkdir(dir, { recursive: true });
       const ext = path.extname(file.name) || ".jpg";
       const filename = `${uuid()}${ext}`;
-      const filepath = path.join(dir, filename);
-      await writeFile(filepath, buffer);
-      featuredImageUrl = `/uploads/${filename}`;
+      if (isBlobConfigured()) {
+        featuredImageUrl = await uploadToBlob(buffer, `uploads/${filename}`);
+      } else if (isFtpConfigured()) {
+        featuredImageUrl = await uploadToFtp(buffer, filename, "");
+      } else {
+        const dir = path.join(process.cwd(), "public", "uploads");
+        await mkdir(dir, { recursive: true });
+        const filepath = path.join(dir, filename);
+        await writeFile(filepath, buffer);
+        featuredImageUrl = `/uploads/${filename}`;
+      }
     }
 
     const postId = uuid();
