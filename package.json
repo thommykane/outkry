@@ -1,0 +1,39 @@
+{
+  "name": "outkry",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push:pg",
+    "db:studio": "drizzle-kit studio",
+    "seed": "node scripts/run-with-env.js npx tsx scripts/seed-categories.ts",
+    "seed:posts": "node scripts/run-with-env.js npx tsx scripts/seed-posts.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "drizzle-orm": "^0.29.0",
+    "next": "^14.2.0",
+    "nodemailer": "^8.0.1",
+    "postgres": "^3.4.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/nodemailer": "^7.0.11",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/uuid": "^9.0.7",
+    "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.20.0",
+    "typescript": "^5"
+  }
+}
