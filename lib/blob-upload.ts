@@ -5,8 +5,9 @@ import { put } from "@vercel/blob";
  * Requires BLOB_READ_WRITE_TOKEN (set automatically when you create a Blob store in Vercel).
  */
 export async function uploadToBlob(buffer: Buffer, pathname: string): Promise<string> {
-  const blob = await put(pathname, buffer, { access: "public" });
-  return blob.url;
+  const body = new Blob([buffer]);
+  const result = await put(pathname, body, { access: "public" });
+  return result.url;
 }
 
 export function isBlobConfigured(): boolean {

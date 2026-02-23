@@ -132,20 +132,25 @@ export async function POST(req: NextRequest) {
 
     let featuredImageUrl: string | null = null;
     if (file && file.size > 0) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const ext = path.extname(file.name) || ".jpg";
-      const filename = `${uuid()}${ext}`;
-      if (isBlobConfigured()) {
-        featuredImageUrl = await uploadToBlob(buffer, `uploads/${filename}`);
-      } else if (isFtpConfigured()) {
-        featuredImageUrl = await uploadToFtp(buffer, filename, "");
-      } else {
-        const dir = path.join(process.cwd(), "public", "uploads");
-        await mkdir(dir, { recursive: true });
-        const filepath = path.join(dir, filename);
-        await writeFile(filepath, buffer);
-        featuredImageUrl = `/uploads/${filename}`;
+      try {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const ext = path.extname(file.name) || ".jpg";
+        const filename = `${uuid()}${ext}`;
+        if (isBlobConfigured()) {
+          featuredImageUrl = await uploadToBlob(buffer, `uploads/${filename}`);
+        } else if (isFtpConfigured()) {
+          featuredImageUrl = await uploadToFtp(buffer, filename, "");
+        } else {
+          const dir = path.join(process.cwd(), "public", "uploads");
+          await mkdir(dir, { recursive: true });
+          const filepath = path.join(dir, filename);
+          await writeFile(filepath, buffer);
+          featuredImageUrl = `/uploads/${filename}`;
+        }
+      } catch (uploadErr) {
+        console.error("Image upload failed:", uploadErr);
+        featuredImageUrl = null;
       }
     }
 
@@ -197,6 +202,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Failed to create post";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
