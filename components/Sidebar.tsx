@@ -107,10 +107,14 @@ export default function Sidebar() {
       <nav style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {(sections.length > 0 || categoryTree.length > 0)
           ? (sections.length > 0 ? sections : [{ id: "discussion", name: "Categories", sortOrder: 0 }]).map((sec) => {
+              const sectionIds = sections.length > 0 ? sections.map((s) => s.id) : ["discussion"];
               const catsInSection =
                 sections.length > 0
                   ? categoryTree
-                      .filter((cat) => (cat.menuSection ?? "discussion") === sec.id)
+                      .filter((cat) => {
+                        const ms = cat.menuSection ?? "discussion";
+                        return ms === sec.id || (sectionIds.indexOf(ms) === -1 && sec.id === (sectionIds[0] ?? "discussion"));
+                      })
                       .sort((a, b) => a.name.localeCompare(b.name))
                   : [...categoryTree].sort((a, b) => a.name.localeCompare(b.name));
               return (
