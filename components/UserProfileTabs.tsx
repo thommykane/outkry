@@ -18,11 +18,12 @@ export default function UserProfileTabs({
 }) {
   const [tab, setTab] = useState<Tab>("posts");
 
-  const tabs: { key: Tab; label: string; show: boolean }[] = [
+  const allTabs: { key: Tab; label: string; show: boolean }[] = [
     { key: "posts", label: "My Posts", show: true },
     { key: "saves", label: "My Saves", show: isOwnProfile },
     { key: "connections", label: "My Connections", show: isOwnProfile },
-  ].filter((t) => t.show);
+  ];
+  const tabs = allTabs.filter((t) => t.show);
 
   return (
     <>
