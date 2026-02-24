@@ -5,7 +5,8 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 type UserInfo = { username: string; isAdmin: boolean; isModerator: boolean };
 
-type CategoryWithSection = { id: string; name: string; menuSection?: string; children: { id: string; name: string }[] };
+type CategoryChild = { id: string; name: string; slug?: string; children?: CategoryChild[] };
+type CategoryWithSection = { id: string; name: string; menuSection?: string; children: CategoryChild[] };
 type Section = { id: string; name: string; sortOrder?: number };
 
 export default function Sidebar() {
@@ -169,23 +170,68 @@ export default function Sidebar() {
                               animation: "fadeIn 0.3s ease-out",
                             }}
                           >
-                            {cat.children.map((ch) => (
-                              <Link
-                                key={ch.id}
-                                href={`/c/${ch.id}`}
-                                style={{
-                                  display: "block",
-                                  padding: "0.4rem 0",
-                                  fontSize: "0.85rem",
-                                  color: "var(--gold-dim)",
-                                  borderBottom: "1px solid var(--glass-border)",
-                                  overflowWrap: "break-word",
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {ch.name}
-                              </Link>
-                            ))}
+                            {cat.children.map((ch) =>
+                              ch.children && ch.children.length > 0 ? (
+                                <div key={ch.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggle(ch.id)}
+                                    style={{
+                                      width: "100%",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      padding: "0.35rem 0",
+                                      background: "none",
+                                      border: "none",
+                                      color: "var(--gold-dim)",
+                                      fontSize: "0.85rem",
+                                      cursor: "pointer",
+                                      textAlign: "left",
+                                    }}
+                                  >
+                                    <span>{ch.name}</span>
+                                    <span style={{ fontSize: "0.9rem" }}>{openIds.has(ch.id) ? "−" : "+"}</span>
+                                  </button>
+                                  {openIds.has(ch.id) && (
+                                    <div style={{ paddingLeft: "0.75rem", paddingBottom: "0.35rem" }}>
+                                      {ch.children.map((gch) => (
+                                        <Link
+                                          key={gch.id}
+                                          href={`/c/${gch.id}`}
+                                          style={{
+                                            display: "block",
+                                            padding: "0.3rem 0",
+                                            fontSize: "0.8rem",
+                                            color: "var(--gold-dim)",
+                                            overflowWrap: "break-word",
+                                            wordBreak: "break-word",
+                                          }}
+                                        >
+                                          {gch.name}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <Link
+                                  key={ch.id}
+                                  href={`/c/${ch.id}`}
+                                  style={{
+                                    display: "block",
+                                    padding: "0.4rem 0",
+                                    fontSize: "0.85rem",
+                                    color: "var(--gold-dim)",
+                                    borderBottom: "1px solid var(--glass-border)",
+                                    overflowWrap: "break-word",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {ch.name}
+                                </Link>
+                              )
+                            )}
                           </div>
                         )}
                       </div>
