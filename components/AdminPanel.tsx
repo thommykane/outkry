@@ -6,8 +6,9 @@ import AdminCategories from "./AdminCategories";
 import AdminPosts from "./AdminPosts";
 import AdminAnnouncements from "./AdminAnnouncements";
 import AdminSections from "./AdminSections";
+import AdminSettings from "./AdminSettings";
 
-type Tab = "users" | "sections" | "categories" | "posts" | "announcements";
+type Tab = "users" | "sections" | "categories" | "posts" | "announcements" | "settings";
 
 export default function AdminPanel() {
   const [tab, setTab] = useState<Tab>("users");
@@ -18,6 +19,7 @@ export default function AdminPanel() {
     { key: "categories", label: "Categories" },
     { key: "posts", label: "Posts" },
     { key: "announcements", label: "Announcements" },
+    { key: "settings", label: "Settings" },
   ];
 
   return (
@@ -54,6 +56,7 @@ export default function AdminPanel() {
       {tab === "categories" && <AdminCategories />}
       {tab === "posts" && <AdminPosts />}
       {tab === "announcements" && <AdminAnnouncements />}
+      {tab === "settings" && <AdminSettings />}
     </div>
   );
 }

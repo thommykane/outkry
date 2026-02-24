@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { votes, posts, sessions } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-
-const ARCHIVE_SCORE = 500;
+import { getScoreThresholds } from "@/lib/settings";
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,11 +67,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const { archiveScore } = await getScoreThresholds();
     await db
       .update(posts)
       .set({
         score: newScore,
-        isArchived: newScore >= ARCHIVE_SCORE,
+        isArchived: newScore >= archiveScore,
       })
       .where(eq(posts.id, postId));
 

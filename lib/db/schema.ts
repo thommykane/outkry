@@ -113,3 +113,8 @@ export const categoryFollows = pgTable(
   },
   (t) => ({ pk: primaryKey({ columns: [t.userId, t.categoryId] }) })
 );
+
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});

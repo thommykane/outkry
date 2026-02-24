@@ -7,11 +7,10 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { uploadToFtp, isFtpConfigured } from "@/lib/ftp-upload";
 import { uploadToBlob, isBlobConfigured } from "@/lib/blob-upload";
+import { getScoreThresholds } from "@/lib/settings";
 
 const POSTS_PER_PAGE = 20;
 const MAX_PAGES = 10;
-const ARCHIVE_SCORE = 500;
-const TOP_SCORE_THRESHOLD = 25;
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,13 +24,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "categoryId required" }, { status: 400 });
     }
 
+    const { topScoreThreshold, archiveScore } = await getScoreThresholds();
     const offset = (page - 1) * POSTS_PER_PAGE;
 
     const whereClause =
       tab === "archived"
-        ? and(eq(posts.categoryId, categoryId), gte(posts.score, ARCHIVE_SCORE))
+        ? and(eq(posts.categoryId, categoryId), gte(posts.score, archiveScore))
         : tab === "top"
-        ? and(eq(posts.categoryId, categoryId), gte(posts.score, TOP_SCORE_THRESHOLD))
+        ? and(eq(posts.categoryId, categoryId), gte(posts.score, topScoreThreshold))
         : eq(posts.categoryId, categoryId);
 
     const orderBy =
