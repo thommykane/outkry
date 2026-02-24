@@ -5,10 +5,21 @@ import { useState } from "react";
 import { isAnonymousCategory, getAnonymousDisplayName } from "@/lib/anonymous";
 import FeaturedImage from "@/components/FeaturedImage";
 
-export default function PostImageCard({ post, currentUserId }: { post: any; currentUserId?: string | null }) {
+export default function PostImageCard({
+  post,
+  currentUserId,
+  isAdmin,
+  onDeleted,
+}: {
+  post: any;
+  currentUserId?: string | null;
+  isAdmin?: boolean;
+  onDeleted?: (postId: string) => void;
+}) {
   const [score, setScore] = useState(post.score ?? 0);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isOwnPost = Boolean(currentUserId && post.authorId === currentUserId);
   const isAnon = isAnonymousCategory(post.categoryId || "");
@@ -36,6 +47,24 @@ export default function PostImageCard({ post, currentUserId }: { post: any; curr
   };
 
   const scoreColor = score >= 0 ? "#fff" : "#e5534b";
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAdmin || !onDeleted) return;
+    if (!confirm("Delete this post? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) onDeleted(post.id);
+      else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to delete post");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Link
@@ -152,6 +181,26 @@ export default function PostImageCard({ post, currentUserId }: { post: any; curr
             >
               ▼
             </button>
+            {isAdmin && onDeleted && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  marginLeft: "auto",
+                  padding: "0.25rem 0.5rem",
+                  fontSize: "0.75rem",
+                  background: "transparent",
+                  border: "1px solid #e5534b",
+                  borderRadius: "4px",
+                  color: "#e5534b",
+                  cursor: deleting ? "not-allowed" : "pointer",
+                  opacity: deleting ? 0.6 : 1,
+                }}
+              >
+                {deleting ? "…" : "Delete"}
+              </button>
+            )}
           </div>
         </div>
       </div>

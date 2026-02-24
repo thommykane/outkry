@@ -15,10 +15,21 @@ function excerpt(text: string) {
   return cleaned.length > MAX_EXCERPT_CHARS ? cleaned.slice(0, MAX_EXCERPT_CHARS) + "..." : cleaned;
 }
 
-export default function PostRow({ post, currentUserId }: { post: any; currentUserId?: string | null }) {
+export default function PostRow({
+  post,
+  currentUserId,
+  isAdmin,
+  onDeleted,
+}: {
+  post: any;
+  currentUserId?: string | null;
+  isAdmin?: boolean;
+  onDeleted?: (postId: string) => void;
+}) {
   const [score, setScore] = useState(post.score ?? 0);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isOwnPost = Boolean(currentUserId && post.authorId === currentUserId);
   const isAnon = isAnonymousCategory(post.categoryId || "");
@@ -44,6 +55,22 @@ export default function PostRow({ post, currentUserId }: { post: any; currentUse
   };
 
   const scoreColor = score >= 0 ? "#fff" : "#e5534b";
+
+  const handleDelete = async () => {
+    if (!isAdmin || !onDeleted) return;
+    if (!confirm("Delete this post? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) onDeleted(post.id);
+      else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to delete post");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div
@@ -178,20 +205,42 @@ export default function PostRow({ post, currentUserId }: { post: any; currentUse
         </div>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-        <Link
-          href={`/post/${post.id}`}
-          style={{
-            display: "block",
-            fontWeight: 700,
-            fontSize: "1.15rem",
-            marginBottom: "0.5rem",
-            overflowWrap: "break-word",
-            wordBreak: "break-word",
-          }}
-        >
-          {post.title}
-        </Link>
+      <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.5rem" }}>
+          <Link
+            href={`/post/${post.id}`}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontWeight: 700,
+              fontSize: "1.15rem",
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
+            }}
+          >
+            {post.title}
+          </Link>
+          {isAdmin && onDeleted && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              style={{
+                flexShrink: 0,
+                padding: "0.25rem 0.5rem",
+                fontSize: "0.75rem",
+                background: "transparent",
+                border: "1px solid #e5534b",
+                borderRadius: "4px",
+                color: "#e5534b",
+                cursor: deleting ? "not-allowed" : "pointer",
+                opacity: deleting ? 0.6 : 1,
+              }}
+            >
+              {deleting ? "…" : "Delete"}
+            </button>
+          )}
+        </div>
         <p
           style={{
             fontSize: "0.95rem",

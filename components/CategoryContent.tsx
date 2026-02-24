@@ -360,7 +360,13 @@ export default function CategoryContent({
           <>
             <div style={{ display: "flex", flexDirection: "column", maxWidth: "900px" }}>
               {posts.map((post) => (
-                <PostImageCard key={post.id} post={post} currentUserId={currentUserId} />
+                <PostImageCard
+                  key={post.id}
+                  post={post}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                  onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+                />
               ))}
             </div>
             {totalPages > 1 && (
@@ -411,7 +417,13 @@ export default function CategoryContent({
         ) : (
           <>
             {posts.map((post) => (
-              <PostRow key={post.id} post={post} currentUserId={currentUserId} />
+              <PostRow
+                key={post.id}
+                post={post}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
+                onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+              />
             ))}
             {totalPages > 1 && (
               <div

@@ -8,6 +8,7 @@ import { getCategoryById } from "@/lib/categories";
 import { isAnonymousCategory, getAnonymousDisplayName } from "@/lib/anonymous";
 import ShareButtons from "@/components/ShareButtons";
 import FeaturedImage from "@/components/FeaturedImage";
+import AdminDeletePostButton from "@/components/AdminDeletePostButton";
 
 function renderPostBody(body: string): string {
   const escaped = body
@@ -120,6 +121,7 @@ export default async function PostPage({ params }: Props) {
         }}
       />
       <ShareButtons url={postUrl} title={post.title} />
+      <AdminDeletePostButton postId={id} categoryId={post.categoryId} />
     </div>
   );
 }
