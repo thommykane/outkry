@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { votes, posts, sessions } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getScoreThresholds } from "@/lib/settings";
+import { getScoreThresholds, getAutoDeleteScore } from "@/lib/settings";
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,6 +68,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { archiveScore } = await getScoreThresholds();
+    const autoDeleteScore = await getAutoDeleteScore();
+
+    if (newScore <= autoDeleteScore) {
+      await db.delete(votes).where(eq(votes.postId, postId));
+      await db.delete(posts).where(eq(posts.id, postId));
+      return NextResponse.json({ newScore, deleted: true });
+    }
+
     await db
       .update(posts)
       .set({

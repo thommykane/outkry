@@ -48,6 +48,7 @@ export const categories = pgTable("categories", {
   sortOrder: integer("sort_order").default(0),
   menuSection: text("menu_section").default("discussion"), // "discussion" | "image" for parent categories
   rulesGuidelines: text("rules_guidelines"),
+  defaultTab: text("default_tab").default("recent"), // "recent" | "top" for category page default tab
 });
 
 export const posts = pgTable("posts", {
@@ -118,3 +119,31 @@ export const appSettings = pgTable("app_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });
+
+export const savedPosts = pgTable(
+  "saved_posts",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    savedAt: timestamp("saved_at").defaultNow().notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.postId] }) })
+);
+
+export const userConnections = pgTable(
+  "user_connections",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    connectedUserId: text("connected_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.connectedUserId] }) })
+);

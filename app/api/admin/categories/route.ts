@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   await requireAdmin();
 
   const body = await req.json();
-  const { name, parentId, menuSection } = body;
+  const { name, parentId, menuSection, defaultTab } = body;
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "name required" }, { status: 400 });
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
     parentId: parentId || null,
     sortOrder,
     ...(parentId ? {} : { menuSection: (typeof menuSection === "string" && menuSection.trim()) ? menuSection.trim() : "discussion" }),
+    defaultTab: defaultTab === "top" ? "top" : "recent",
   });
 
   return NextResponse.json({ success: true, id });
@@ -103,6 +104,15 @@ export async function PATCH(req: NextRequest) {
     if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     if (cat.parentId) return NextResponse.json({ error: "Only parent categories have sections" }, { status: 400 });
     await db.update(categories).set({ menuSection: menuSection.trim() }).where(eq(categories.id, categoryId));
+    return NextResponse.json({ success: true });
+  }
+
+  // Update category default tab (recent | top)
+  const defaultTab = body.defaultTab;
+  if (categoryId && (defaultTab === "recent" || defaultTab === "top")) {
+    const [cat] = await db.select().from(categories).where(eq(categories.id, categoryId)).limit(1);
+    if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    await db.update(categories).set({ defaultTab }).where(eq(categories.id, categoryId));
     return NextResponse.json({ success: true });
   }
 
