@@ -33,6 +33,9 @@ export default function CategoryContent({
   const [savingRules, setSavingRules] = useState(false);
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [purgeModalOpen, setPurgeModalOpen] = useState(false);
+  const [purgeConfirmText, setPurgeConfirmText] = useState("");
+  const [purgeLoading, setPurgeLoading] = useState(false);
 
   useEffect(() => {
     setRulesGuidelines(initialRules ?? null);
@@ -309,12 +312,13 @@ export default function CategoryContent({
       {/* Post form */}
       <PostForm categoryId={categoryId} onPostCreated={() => setPage(1)} />
 
-      {/* Sort dropdown */}
+      {/* Sort dropdown + top pagination + Purge (admin) */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "0.5rem",
+          flexWrap: "wrap",
+          gap: "0.75rem",
           marginTop: "1.5rem",
           marginBottom: "0.75rem",
         }}
@@ -344,7 +348,189 @@ export default function CategoryContent({
             </option>
           ))}
         </select>
+        {totalPages > 1 && (
+          <>
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              style={{
+                padding: "0.4rem 0.8rem",
+                background: "var(--glass)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "6px",
+                color: "var(--gold-bright)",
+                cursor: page <= 1 ? "not-allowed" : "pointer",
+                opacity: page <= 1 ? 0.5 : 1,
+              }}
+            >
+              ← Prev
+            </button>
+            <span style={{ alignSelf: "center", fontSize: "0.85rem", color: "var(--gold-dim)" }}>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              style={{
+                padding: "0.4rem 0.8rem",
+                background: "var(--glass)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "6px",
+                color: "var(--gold-bright)",
+                cursor: page >= totalPages ? "not-allowed" : "pointer",
+                opacity: page >= totalPages ? 0.5 : 1,
+              }}
+            >
+              Next →
+            </button>
+          </>
+        )}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => {
+              setPurgeModalOpen(true);
+              setPurgeConfirmText("");
+            }}
+            style={{
+              padding: "0.4rem 0.8rem",
+              background: "var(--glass)",
+              border: "1px solid #8b2a2a",
+              borderRadius: "6px",
+              color: "#e88",
+              fontSize: "0.85rem",
+              cursor: "pointer",
+            }}
+          >
+            Purge Category
+          </button>
+        )}
       </div>
+
+      {/* Purge category modal (admin) */}
+      {purgeModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.target === e.currentTarget && setPurgeModalOpen(false)}
+        >
+          <div
+            style={{
+              background: "var(--glass-dark)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "8px",
+              padding: "1.25rem",
+              maxWidth: "420px",
+              width: "90%",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setPurgeModalOpen(false)}
+              style={{
+                position: "absolute",
+                top: "0.5rem",
+                right: "0.5rem",
+                background: "none",
+                border: "none",
+                color: "var(--gold-dim)",
+                fontSize: "1.25rem",
+                cursor: "pointer",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+            <p style={{ margin: "0 0 1rem", fontSize: "0.9rem", color: "var(--gold-bright)", lineHeight: 1.5 }}>
+              Are you sure you wish to purge all posts in this category? This action cannot be undone. If not, click the X to close this window, if you truly wish to purge the category, please type the word &quot;Purge&quot; in the field below.
+            </p>
+            <input
+              type="text"
+              value={purgeConfirmText}
+              onChange={(e) => setPurgeConfirmText(e.target.value)}
+              placeholder='Type "Purge"'
+              autoFocus
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "0.5rem 0.75rem",
+                background: "var(--glass)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "6px",
+                color: "var(--gold-bright)",
+                fontSize: "0.9rem",
+                marginBottom: "0.75rem",
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => setPurgeModalOpen(false)}
+                style={{
+                  padding: "0.4rem 0.8rem",
+                  background: "var(--glass)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: "6px",
+                  color: "var(--gold-dim)",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={purgeConfirmText.trim() !== "Purge" || purgeLoading}
+                onClick={async () => {
+                  if (purgeConfirmText.trim() !== "Purge" || purgeLoading) return;
+                  setPurgeLoading(true);
+                  try {
+                    const res = await fetch("/api/admin/purge-category", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "include",
+                      body: JSON.stringify({ categoryId }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setPurgeModalOpen(false);
+                      setPurgeConfirmText("");
+                      setPosts([]);
+                      setTotalPages(1);
+                      setPage(1);
+                      loadPosts();
+                    } else {
+                      alert(data.error || "Purge failed");
+                    }
+                  } finally {
+                    setPurgeLoading(false);
+                  }
+                }}
+                style={{
+                  padding: "0.4rem 0.8rem",
+                  background: purgeConfirmText.trim() === "Purge" && !purgeLoading ? "#8b2a2a" : "var(--glass)",
+                  border: "1px solid #8b2a2a",
+                  borderRadius: "6px",
+                  color: purgeConfirmText.trim() === "Purge" && !purgeLoading ? "#fff" : "#e88",
+                  cursor: purgeConfirmText.trim() === "Purge" && !purgeLoading ? "pointer" : "not-allowed",
+                  opacity: purgeConfirmText.trim() === "Purge" && !purgeLoading ? 1 : 0.7,
+                }}
+              >
+                {purgeLoading ? "Purging..." : "Purge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Post rows / image grid */}
       <div className="glass-panel" style={{ padding: "1rem", background: "var(--glass-dark)" }}>
