@@ -108,7 +108,7 @@ export default function CategoryContent({
   ];
 
   return (
-    <div style={{ maxWidth: "900px" }}>
+    <div style={{ maxWidth: "900px", marginLeft: "auto", marginRight: "auto", width: "100%", textAlign: "left" }}>
       <AnnouncementBanner />
       {/* Tabs */}
       <div
