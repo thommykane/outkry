@@ -16,6 +16,7 @@ export default function AdminCategories() {
   const [editName, setEditName] = useState("");
   const [draggingSubId, setDraggingSubId] = useState<string | null>(null);
   const [dragOverSubId, setDragOverSubId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -39,12 +40,23 @@ export default function AdminCategories() {
 
   async function loadCategories() {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch("/api/admin/categories", { credentials: "include" });
       const text = await res.text();
-      const data = text ? JSON.parse(text) : {};
-      setCategories(data.categories || []);
+      let data: { categories?: unknown[]; error?: string } = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setLoadError(res.ok ? "Invalid response" : `Failed to load (${res.status}). Try refreshing.`);
+        setCategories([]);
+        setLoading(false);
+        return;
+      }
+      setCategories(Array.isArray(data.categories) ? data.categories : []);
+      if (!res.ok && data.error) setLoadError(data.error);
     } catch {
+      setLoadError("Network error");
       setCategories([]);
     } finally {
       setLoading(false);
@@ -348,6 +360,18 @@ export default function AdminCategories() {
         </div>
       </div>
 
+      {loadError && (
+        <div style={{ color: "#e5534b", padding: "0.75rem 0", fontSize: "0.9rem" }}>
+          {loadError}
+          <button
+            type="button"
+            onClick={() => loadCategories()}
+            style={{ marginLeft: "0.5rem", padding: "0.25rem 0.5rem", cursor: "pointer" }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
       {loading ? (
         <div style={{ color: "var(--gold-dim)", padding: "2rem" }}>Loading...</div>
       ) : (

@@ -108,17 +108,29 @@ export default function Sidebar() {
       )}
       <nav style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {(sections.length > 0 || categoryTree.length > 0)
-          ? (sections.length > 0 ? sections : [{ id: "discussion", name: "Categories", sortOrder: 0 }]).map((sec) => {
-              const sectionIds = sections.length > 0 ? sections.map((s) => s.id) : ["discussion"];
-              const catsInSection =
-                sections.length > 0
-                  ? categoryTree
-                      .filter((cat) => {
-                        const ms = cat.menuSection ?? "discussion";
-                        return ms === sec.id || (sectionIds.indexOf(ms) === -1 && sec.id === (sectionIds[0] ?? "discussion"));
-                      })
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                  : [...categoryTree].sort((a, b) => a.name.localeCompare(b.name));
+          ? (() => {
+              const sectionList = sections.length > 0 ? sections : [{ id: "discussion", name: "Categories", sortOrder: 0 }];
+              const sectionIds = new Set(sectionList.map((s) => s.id));
+              const hasOther =
+                sectionList.length > 0 &&
+                categoryTree.some(
+                  (cat) => !sectionIds.has((cat.menuSection ?? "discussion").trim() || "discussion")
+                );
+              const sectionsWithOther =
+                sectionList.length > 0
+                  ? [...sectionList, ...(hasOther ? [{ id: "__other__", name: "Other", sortOrder: 999 }] : [])]
+                  : sectionList;
+              return sectionsWithOther.map((sec) => {
+                const catsInSection =
+                  sectionList.length > 0
+                    ? categoryTree
+                        .filter((cat) => {
+                          const ms = (cat.menuSection ?? "discussion").trim() || "discussion";
+                          if (sec.id === "__other__") return !sectionIds.has(ms);
+                          return ms === sec.id;
+                        })
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                    : [...categoryTree].sort((a, b) => a.name.localeCompare(b.name));
               return (
                 <div key={sec.id}>
                   <div
@@ -129,7 +141,7 @@ export default function Sidebar() {
                       fontSize: "0.85rem",
                       fontWeight: 600,
                       textAlign: "left",
-                      marginTop: sec.id !== (sections[0] || { id: "" }).id ? "0.5rem" : 0,
+                      marginTop: sec.id !== (sectionList[0] || { id: "" }).id ? "0.5rem" : 0,
                     }}
                   >
                     {sec.name}
@@ -239,7 +251,8 @@ export default function Sidebar() {
                   })}
                 </div>
               );
-            })
+            });
+            })()
           : (
             <div style={{ padding: "1rem", fontSize: "0.8rem", color: "var(--gold-dim)" }}>
               Loading menu...
