@@ -12,7 +12,8 @@
     "db:push": "drizzle-kit push:pg",
     "db:studio": "drizzle-kit studio",
     "seed": "node scripts/run-with-env.js npx tsx scripts/seed-categories.ts",
-    "seed:posts": "node scripts/run-with-env.js npx tsx scripts/seed-posts.ts"
+    "seed:posts": "node scripts/run-with-env.js npx tsx scripts/seed-posts.ts",
+    "migrate:uploads-to-blob": "node scripts/run-with-env.js npx tsx scripts/migrate-uploads-to-blob.ts"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.0",

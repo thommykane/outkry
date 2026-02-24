@@ -34,16 +34,30 @@ export async function PATCH(req: NextRequest) {
   const ext = path.extname(file.name) || ".jpg";
   const filename = `${uuid()}${ext}`;
   let avatarUrl: string;
-  if (isBlobConfigured()) {
-    avatarUrl = await uploadToBlob(buffer, `uploads/avatars/${filename}`);
-  } else if (isFtpConfigured()) {
-    avatarUrl = await uploadToFtp(buffer, filename, "avatars");
-  } else {
-    const dir = path.join(process.cwd(), "public", "uploads", "avatars");
-    await mkdir(dir, { recursive: true });
-    const filepath = path.join(dir, filename);
-    await writeFile(filepath, buffer);
-    avatarUrl = `/uploads/avatars/${filename}`;
+
+  try {
+    if (isBlobConfigured()) {
+      avatarUrl = await uploadToBlob(buffer, `uploads/avatars/${filename}`);
+    } else if (isFtpConfigured()) {
+      avatarUrl = await uploadToFtp(buffer, filename, "avatars");
+    } else if (process.env.VERCEL) {
+      return NextResponse.json(
+        { error: "Avatar upload not configured on Vercel. Add BLOB_READ_WRITE_TOKEN in Project Settings → Environment Variables and redeploy." },
+        { status: 503 }
+      );
+    } else {
+      const dir = path.join(process.cwd(), "public", "uploads", "avatars");
+      await mkdir(dir, { recursive: true });
+      const filepath = path.join(dir, filename);
+      await writeFile(filepath, buffer);
+      avatarUrl = `/uploads/avatars/${filename}`;
+    }
+  } catch (err) {
+    console.error("Avatar upload failed:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Avatar upload failed" },
+      { status: 500 }
+    );
   }
 
   await db
