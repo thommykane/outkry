@@ -30,7 +30,7 @@ export default function Sidebar() {
     ])
       .then(([catData, secData]) => {
         setCategoryTree(Array.isArray(catData.tree) ? catData.tree : []);
-        if (secData.sections && secData.sections.length > 0) setSections(secData.sections);
+        setSections(Array.isArray(secData.sections) ? secData.sections : []);
       })
       .catch(() => {});
   }

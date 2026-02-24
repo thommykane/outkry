@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { menuSections } from "@/lib/db/schema";
 import { asc } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 const FALLBACK_SECTIONS = [
   { id: "discussion", name: "Discussion Board", sortOrder: 0 },
   { id: "image", name: "Image Board", sortOrder: 1 },
