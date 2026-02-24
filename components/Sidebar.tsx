@@ -23,11 +23,11 @@ export default function Sidebar() {
 
   function loadData() {
     Promise.all([
-      fetch("/api/categories").then((r) => r.json()),
-      fetch("/api/menu-sections").then((r) => r.json()),
+      fetch("/api/categories", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/menu-sections", { cache: "no-store" }).then((r) => r.json()),
     ])
       .then(([catData, secData]) => {
-        if (catData.tree && catData.tree.length > 0) setCategoryTree(catData.tree);
+        setCategoryTree(Array.isArray(catData.tree) ? catData.tree : []);
         if (secData.sections && secData.sections.length > 0) setSections(secData.sections);
       })
       .catch(() => {});
