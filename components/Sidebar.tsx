@@ -22,9 +22,10 @@ export default function Sidebar() {
   }, []);
 
   function loadData() {
+    const cacheBust = `_t=${Date.now()}`;
     Promise.all([
-      fetch("/api/categories", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/menu-sections", { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/categories?${cacheBust}`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/menu-sections?${cacheBust}`, { cache: "no-store" }).then((r) => r.json()),
     ])
       .then(([catData, secData]) => {
         setCategoryTree(Array.isArray(catData.tree) ? catData.tree : []);

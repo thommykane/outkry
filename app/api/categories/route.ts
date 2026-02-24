@@ -16,7 +16,10 @@ export async function GET() {
     const dbCategories = await db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.id));
 
     if (dbCategories.length === 0) {
-      return NextResponse.json({ tree: fallbackTree() });
+      const res = NextResponse.json({ tree: fallbackTree() });
+      res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.headers.set("Pragma", "no-cache");
+      return res;
     }
 
     const parents = dbCategories.filter((c) => !c.parentId);
@@ -38,9 +41,15 @@ export async function GET() {
           })),
       }));
 
-    return NextResponse.json({ tree });
+    const res = NextResponse.json({ tree });
+    res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.headers.set("Pragma", "no-cache");
+    return res;
   } catch (err) {
     console.error("[api/categories]", err);
-    return NextResponse.json({ tree: fallbackTree() });
+    const fallback = NextResponse.json({ tree: fallbackTree() });
+    fallback.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    fallback.headers.set("Pragma", "no-cache");
+    return fallback;
   }
 }

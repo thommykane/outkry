@@ -17,9 +17,15 @@ export async function GET() {
       sections = await db.select().from(menuSections).orderBy(asc(menuSections.sortOrder), asc(menuSections.id));
     }
 
-    return NextResponse.json({ sections });
+    const res = NextResponse.json({ sections });
+    res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.headers.set("Pragma", "no-cache");
+    return res;
   } catch (err) {
     console.error("[api/menu-sections]", err);
-    return NextResponse.json({ sections: FALLBACK_SECTIONS });
+    const fallback = NextResponse.json({ sections: FALLBACK_SECTIONS });
+    fallback.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    fallback.headers.set("Pragma", "no-cache");
+    return fallback;
   }
 }
