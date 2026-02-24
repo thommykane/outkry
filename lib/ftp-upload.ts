@@ -1,3 +1,4 @@
+import { Readable } from "stream";
 import { Client } from "basic-ftp";
 
 export type FtpConfig = {
@@ -46,7 +47,7 @@ export async function uploadToFtp(
     });
 
     await client.ensureDir(remotePath);
-    await client.uploadFrom(buffer, remoteFile);
+    await client.uploadFrom(Readable.from(buffer), remoteFile);
     return publicUrl;
   } finally {
     client.close();
