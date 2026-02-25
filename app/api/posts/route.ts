@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       const totalPages = Math.min(Math.ceil(total / MAIN_PAGE_PER_PAGE), MAIN_PAGE_MAX_PAGES);
       const offset = (page - 1) * MAIN_PAGE_PER_PAGE;
       const items = shuffled.slice(offset, offset + MAIN_PAGE_PER_PAGE);
-      const authorIds = [...new Set(items.map((p) => p.authorId))];
+      const authorIds = Array.from(new Set(items.map((p) => p.authorId)));
       const authorMap = new Map<string, { username: string; avatarUrl: string | null }>();
       if (authorIds.length > 0) {
         const authorRows = await db
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
         ? db
             .select({ id: users.id, username: users.username, avatarUrl: users.avatarUrl })
             .from(users)
-            .where(inArray(users.id, [...new Set(items.map((p) => p.authorId))]))
+            .where(inArray(users.id, Array.from(new Set(items.map((p) => p.authorId)))))
         : Promise.resolve([]),
     ]);
     const total = countResult[0]?.count ?? 0;
