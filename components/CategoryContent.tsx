@@ -40,6 +40,7 @@ export default function CategoryContent({
   const [purgeModalOpen, setPurgeModalOpen] = useState(false);
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
   const [purgeLoading, setPurgeLoading] = useState(false);
+  const [showPostForm, setShowPostForm] = useState(false);
 
   useEffect(() => {
     setRulesGuidelines(initialRules ?? null);
@@ -191,8 +192,26 @@ export default function CategoryContent({
             {followLoading ? "..." : following ? "Following" : "Follow"}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setShowPostForm((prev) => !prev)}
+          style={{
+            padding: "0.4rem 0.9rem",
+            fontSize: "0.85rem",
+            background: showPostForm ? "var(--glass)" : "#2d5016",
+            border: showPostForm ? "1px solid var(--glass-border)" : "1px solid #3d6b20",
+            borderRadius: "6px",
+            color: showPostForm ? "var(--gold-dim)" : "#a8e06c",
+            cursor: "pointer",
+          }}
+        >
+          Post
+        </button>
       </div>
 
+      {/* Rules & Guidelines + Post form (expand downward when Post clicked) */}
+      {showPostForm && (
+      <>
       {/* Rules & Guidelines */}
       <div
         className="glass-panel"
@@ -317,6 +336,9 @@ export default function CategoryContent({
 
       {/* Post form */}
       <PostForm categoryId={categoryId} onPostCreated={() => setPage(1)} />
+
+      </>
+      )}
 
       {/* Sort dropdown + top pagination + Purge (admin) */}
       <div
