@@ -72,7 +72,17 @@ export default async function PostPage({ params }: Props) {
   const displayName = isAnon ? getAnonymousDisplayName(post.authorId) : author?.username;
 
   return (
-    <div className="glass-panel" style={{ padding: "1.5rem", maxWidth: "800px", background: "var(--glass-dark)" }}>
+    <div
+      className="glass-panel"
+      style={{
+        padding: "1.5rem",
+        maxWidth: "900px",
+        marginLeft: "auto",
+        marginRight: "auto",
+        width: "100%",
+        background: "var(--glass-dark)",
+      }}
+    >
       <Link
         href={cat ? `/c/${post.categoryId}` : "/"}
         style={{ fontSize: "0.85rem", color: "var(--gold-dim)", marginBottom: "1rem", display: "block" }}
