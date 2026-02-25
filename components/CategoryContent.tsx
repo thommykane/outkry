@@ -16,12 +16,14 @@ export default function CategoryContent({
   rulesGuidelines: initialRules = null,
   defaultTab: initialTab = "recent",
   isMainPage = false,
+  isRandomPage = false,
 }: {
   categoryId: string;
   categoryName: string;
   rulesGuidelines?: string | null;
   defaultTab?: "recent" | "top";
   isMainPage?: boolean;
+  isRandomPage?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [sort, setSort] = useState<Sort>("newest");
@@ -41,6 +43,7 @@ export default function CategoryContent({
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
   const [purgeLoading, setPurgeLoading] = useState(false);
   const [showPostForm, setShowPostForm] = useState(false);
+  const [isRandomizing, setIsRandomizing] = useState(false);
 
   useEffect(() => {
     setRulesGuidelines(initialRules ?? null);
@@ -59,8 +62,9 @@ export default function CategoryContent({
 
   async function loadPosts() {
     setLoading(true);
-    const qs = new URLSearchParams({ tab, sort, page: String(page) });
-    const res = await fetch(`/api/posts?categoryId=${categoryId}&${qs}`);
+    const qs = isRandomPage ? "" : new URLSearchParams({ tab, sort, page: String(page) }).toString();
+    const url = qs ? `/api/posts?categoryId=${categoryId}&${qs}` : `/api/posts?categoryId=${categoryId}`;
+    const res = await fetch(url);
     const data = await res.json();
     setPosts(data.posts || []);
     setTotalPages(data.totalPages || 1);
@@ -69,7 +73,15 @@ export default function CategoryContent({
 
   useEffect(() => {
     loadPosts();
-  }, [categoryId, tab, sort, page]);
+  }, [categoryId, tab, sort, page, isRandomPage]);
+
+  async function handleRandomize() {
+    if (isRandomizing) return;
+    setIsRandomizing(true);
+    await new Promise((r) => setTimeout(r, 2000));
+    await loadPosts();
+    setIsRandomizing(false);
+  }
 
   useEffect(() => {
     if (!currentUserId || isMainPage) return;
@@ -115,7 +127,47 @@ export default function CategoryContent({
   return (
     <div style={{ maxWidth: "900px", marginLeft: "auto", marginRight: "auto", width: "100%", textAlign: "left" }}>
       <AnnouncementBanner />
-      {!isMainPage && (
+      {isRandomPage && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "1rem",
+            marginBottom: "1rem",
+            flexWrap: "wrap",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: "1.5rem",
+              fontWeight: 700,
+              color: "var(--gold)",
+              margin: 0,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {categoryName}
+          </h1>
+          <button
+            type="button"
+            onClick={handleRandomize}
+            disabled={isRandomizing}
+            style={{
+              padding: "0.4rem 0.9rem",
+              fontSize: "0.85rem",
+              background: "#2d5016",
+              border: "1px solid #3d6b20",
+              borderRadius: "6px",
+              color: "#a8e06c",
+              cursor: isRandomizing ? "wait" : "pointer",
+            }}
+          >
+            Randomize
+          </button>
+        </div>
+      )}
+      {!isMainPage && !isRandomPage && (
       <>
       {/* Tabs */}
       <div
@@ -602,16 +654,57 @@ export default function CategoryContent({
       )}
 
       {/* Post rows / image grid */}
-      <div className="glass-panel" style={{ padding: "1rem", background: "var(--glass-dark)" }}>
-        {loading ? (
-          <div style={{ color: "var(--gold-dim)", padding: "2rem", textAlign: "center" }}>
-            Loading...
-          </div>
-        ) : posts.length === 0 ? (
-          <div style={{ color: "var(--gold-dim)", padding: "2rem", textAlign: "center" }}>
-            No posts yet. Be the first to post!
-          </div>
-        ) : isMainPage ? (
+      <div style={isRandomPage ? { position: "relative" } : undefined}>
+        <div className="glass-panel" style={{ padding: "1rem", background: "var(--glass-dark)" }}>
+          {loading ? (
+            <div style={{ color: "var(--gold-dim)", padding: "2rem", textAlign: "center" }}>
+              Loading...
+            </div>
+          ) : posts.length === 0 ? (
+            <div style={{ color: "var(--gold-dim)", padding: "2rem", textAlign: "center" }}>
+              {isRandomPage ? "No posts yet." : "No posts yet. Be the first to post!"}
+            </div>
+          ) : isRandomPage ? (
+            <div
+              style={{
+                position: "relative",
+                marginBottom: "0.75rem",
+                paddingTop: "1.5rem",
+                paddingLeft: "0.5rem",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  background: "#000",
+                  color: "#fff",
+                  padding: "0.35rem 0.75rem 0.4rem 0.5rem",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  letterSpacing: "0.02em",
+                  clipPath: "polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+                  boxShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+                  maxWidth: "160px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={posts[0].categoryName ?? ""}
+              >
+                {posts[0].categoryName ?? "—"}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <PostRow
+                  post={posts[0]}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                  onDeleted={() => setPosts([])}
+                />
+              </div>
+            </div>
+          ) : isMainPage ? (
           <>
             {posts.map((post) => (
               <div
@@ -807,6 +900,30 @@ export default function CategoryContent({
               </div>
             )}
           </>
+        )}
+        </div>
+        {isRandomPage && isRandomizing && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(80,80,80,0.75)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              borderRadius: "8px",
+            }}
+          >
+            <img
+              src="/die.png"
+              alt=""
+              width={20}
+              height={20}
+              className="random-die-spin"
+            />
+          </div>
         )}
       </div>
     </div>

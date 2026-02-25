@@ -23,6 +23,18 @@ export default async function CategoryPage({ params }: Props) {
     );
   }
 
+  if (id === "all-random") {
+    return (
+      <CategoryContent
+        categoryId="all-random"
+        categoryName="Random"
+        rulesGuidelines={null}
+        defaultTab="recent"
+        isRandomPage
+      />
+    );
+  }
+
   let categoryName: string;
   let rulesGuidelines: string | null = null;
   let defaultTab: "recent" | "top" = "recent";

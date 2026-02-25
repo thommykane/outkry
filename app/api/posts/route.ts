@@ -44,6 +44,37 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "categoryId required" }, { status: 400 });
     }
 
+    const isRandomPage = categoryId === "all-random";
+    if (isRandomPage) {
+      const allCats = await db.select({ id: categories.id, name: categories.name }).from(categories);
+      const catIds = allCats.filter((c) => c.id !== "all-main-page" && c.id !== "all-random").map((c) => c.id);
+      if (catIds.length === 0) {
+        return NextResponse.json({ posts: [], totalPages: 1, total: 0 });
+      }
+      const rows = await db
+        .select()
+        .from(posts)
+        .where(inArray(posts.categoryId, catIds))
+        .orderBy(sql`random()`)
+        .limit(1);
+      const catNameById = new Map(allCats.map((c) => [c.id, c.name]));
+      if (rows.length === 0) {
+        return NextResponse.json({ posts: [], totalPages: 1, total: 0 });
+      }
+      const p = rows[0];
+      const authorRows = await db
+        .select({ id: users.id, username: users.username, avatarUrl: users.avatarUrl })
+        .from(users)
+        .where(eq(users.id, p.authorId));
+      const author = authorRows[0] ? { username: authorRows[0].username, avatarUrl: authorRows[0].avatarUrl } : null;
+      const postWithAuthor = {
+        ...p,
+        categoryName: catNameById.get(p.categoryId) ?? "—",
+        author: author ? { username: author.username, avatarUrl: author.avatarUrl } : null,
+      };
+      return NextResponse.json({ posts: [postWithAuthor], totalPages: 1, total: 1 });
+    }
+
     if (isMainPage) {
       const [mainOrder, allCats, { topScoreThreshold }] = await Promise.all([
         getMainPageOrder(),

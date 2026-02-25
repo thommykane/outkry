@@ -131,3 +131,16 @@ a:hover {
   background: var(--gold-dim);
   border-radius: 2px;
 }
+
+@keyframes randomDieSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.random-die-spin {
+  animation: randomDieSpin 1s linear infinite;
+}
