@@ -110,27 +110,28 @@ export default function Sidebar() {
         {(sections.length > 0 || categoryTree.length > 0)
           ? (() => {
               const sectionList = sections.length > 0 ? sections : [{ id: "discussion", name: "Categories", sortOrder: 0 }];
-              const norm = (s: string) => (s || "discussion").trim().toLowerCase() || "discussion";
+              const norm = (s: string) => (String(s || "discussion").trim().toLowerCase() || "discussion");
               const sectionIds = new Set(sectionList.map((s) => norm(s.id)));
               const hasOther =
                 sectionList.length > 0 &&
                 categoryTree.some((cat) => !sectionIds.has(norm(cat.menuSection ?? "discussion")));
-              const sectionsWithOther =
+              const sectionsToRender =
                 sectionList.length > 0
                   ? [...sectionList, ...(hasOther ? [{ id: "__other__", name: "Other", sortOrder: 999 }] : [])]
                   : sectionList;
-              return sectionsWithOther.map((sec) => {
+              return sectionsToRender.map((sec, sectionIndex) => {
+                const secIdNorm = norm(sec.id);
                 const catsInSection =
                   sectionList.length > 0
                     ? categoryTree
                         .filter((cat) => {
-                          const ms = norm(cat.menuSection ?? "discussion");
-                          if (sec.id === "__other__") return !sectionIds.has(ms);
-                          return norm(sec.id) === ms;
+                          const catSection = norm(cat.menuSection ?? "discussion");
+                          if (sec.id === "__other__") return !sectionIds.has(catSection);
+                          return catSection === secIdNorm;
                         })
                         .sort((a, b) => a.name.localeCompare(b.name))
                     : [...categoryTree].sort((a, b) => a.name.localeCompare(b.name));
-              return (
+                return (
                 <div key={sec.id}>
                   <div
                     style={{
@@ -140,7 +141,7 @@ export default function Sidebar() {
                       fontSize: "0.85rem",
                       fontWeight: 600,
                       textAlign: "left",
-                      marginTop: sec.id !== (sectionList[0] || { id: "" }).id ? "0.5rem" : 0,
+                      marginTop: sectionIndex > 0 ? "0.5rem" : 0,
                     }}
                   >
                     {sec.name}
