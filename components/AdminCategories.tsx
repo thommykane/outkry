@@ -376,6 +376,9 @@ export default function AdminCategories() {
         <div style={{ color: "var(--gold-dim)", padding: "2rem" }}>Loading...</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          {categories.length === 0 && !loadError ? (
+            <p style={{ color: "var(--gold-dim)", padding: "1rem 0" }}>No categories yet. Create one above or use &quot;Seed default categories&quot;.</p>
+          ) : null}
           {categories.map((cat) => (
             <div key={cat.id} className="glass-panel" style={{ padding: "1rem" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.5rem" }}>

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { getAdminSession, requireAdmin } from "@/lib/admin";
+import { getAdminSessionForRead, requireAdmin } from "@/lib/admin";
 import { v4 as uuid } from "uuid";
 
 export async function GET() {
-  const admin = await getAdminSession();
+  const admin = await getAdminSessionForRead();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden", categories: [] }, { status: 403 });
   }

@@ -110,12 +110,11 @@ export default function Sidebar() {
         {(sections.length > 0 || categoryTree.length > 0)
           ? (() => {
               const sectionList = sections.length > 0 ? sections : [{ id: "discussion", name: "Categories", sortOrder: 0 }];
-              const sectionIds = new Set(sectionList.map((s) => s.id));
+              const norm = (s: string) => (s || "discussion").trim().toLowerCase() || "discussion";
+              const sectionIds = new Set(sectionList.map((s) => norm(s.id)));
               const hasOther =
                 sectionList.length > 0 &&
-                categoryTree.some(
-                  (cat) => !sectionIds.has((cat.menuSection ?? "discussion").trim() || "discussion")
-                );
+                categoryTree.some((cat) => !sectionIds.has(norm(cat.menuSection ?? "discussion")));
               const sectionsWithOther =
                 sectionList.length > 0
                   ? [...sectionList, ...(hasOther ? [{ id: "__other__", name: "Other", sortOrder: 999 }] : [])]
@@ -125,9 +124,9 @@ export default function Sidebar() {
                   sectionList.length > 0
                     ? categoryTree
                         .filter((cat) => {
-                          const ms = (cat.menuSection ?? "discussion").trim() || "discussion";
+                          const ms = norm(cat.menuSection ?? "discussion");
                           if (sec.id === "__other__") return !sectionIds.has(ms);
-                          return ms === sec.id;
+                          return norm(sec.id) === ms;
                         })
                         .sort((a, b) => a.name.localeCompare(b.name))
                     : [...categoryTree].sort((a, b) => a.name.localeCompare(b.name));
