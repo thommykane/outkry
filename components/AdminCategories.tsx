@@ -41,8 +41,14 @@ export default function AdminCategories() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/categories", { credentials: "include" });
-      const data = await res.json().catch(() => ({}));
-      setCategories(data.categories || []);
+      const text = await res.text();
+      let data: { categories?: unknown[]; error?: string } = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = {};
+      }
+      setCategories(Array.isArray(data.categories) ? data.categories : []);
     } catch {
       setCategories([]);
     } finally {

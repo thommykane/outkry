@@ -12,7 +12,7 @@ type Section = { id: string; name: string; sortOrder?: number };
 export default function Sidebar() {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const [categoryTree, setCategoryTree] = useState<CategoryWithSection[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
+  const [sections, setSections] = useState<Section[]>([{ id: "discussion", name: "Categories", sortOrder: 0 }]);
   const [user, setUser] = useState<UserInfo | null>(null);
 
   useEffect(() => {

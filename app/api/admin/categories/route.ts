@@ -2,30 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { getAdminSessionForRead, requireAdmin } from "@/lib/admin";
+import { getAdminSession, requireAdmin } from "@/lib/admin";
 import { v4 as uuid } from "uuid";
 
 export async function GET() {
-  const admin = await getAdminSessionForRead();
-  if (!admin) {
-    return NextResponse.json({ error: "Forbidden", categories: [] }, { status: 403 });
+  try {
+    const admin = await getAdminSession();
+    if (!admin) {
+      return NextResponse.json({ error: "Forbidden", categories: [] }, { status: 403 });
+    }
+
+    const all = await db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.id));
+    const allIds = new Set(all.map((c) => c.id));
+    const parents = all.filter((c) => !c.parentId).sort((a, b) => a.name.localeCompare(b.name));
+    const orphans = all.filter((c) => c.parentId && !allIds.has(c.parentId));
+    const children = all.filter((c) => c.parentId);
+
+    const tree = [
+      ...parents.map((p) => ({
+        ...p,
+        children: children.filter((c) => c.parentId === p.id).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+      })),
+      ...orphans.map((o) => ({ ...o, children: [] })),
+    ].sort((a, b) => a.name.localeCompare(b.name));
+
+    return NextResponse.json({ categories: tree });
+  } catch (err) {
+    console.error("[api/admin/categories GET]", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Server error", categories: [] },
+      { status: 500 }
+    );
   }
-
-  const all = await db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.id));
-  const allIds = new Set(all.map((c) => c.id));
-  const parents = all.filter((c) => !c.parentId).sort((a, b) => a.name.localeCompare(b.name));
-  const orphans = all.filter((c) => c.parentId && !allIds.has(c.parentId));
-  const children = all.filter((c) => c.parentId);
-
-  const tree = [
-    ...parents.map((p) => ({
-      ...p,
-      children: children.filter((c) => c.parentId === p.id).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
-    })),
-    ...orphans.map((o) => ({ ...o, children: [] })),
-  ].sort((a, b) => a.name.localeCompare(b.name));
-
-  return NextResponse.json({ categories: tree });
 }
 
 export async function POST(req: NextRequest) {
