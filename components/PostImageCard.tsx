@@ -159,7 +159,7 @@ export default function PostImageCard({
               style={{
                 background: "none",
                 border: "none",
-                color: voted === "up" ? "var(--gold)" : "rgba(255,255,255,0.7)",
+                color: voted === "up" ? "#4ade80" : "#22c55e",
                 cursor: loading || isOwnPost ? "not-allowed" : "pointer",
                 padding: "0.15rem",
                 fontSize: "0.9rem",
@@ -175,7 +175,7 @@ export default function PostImageCard({
               style={{
                 background: "none",
                 border: "none",
-                color: voted === "down" ? "#e5534b" : "rgba(255,255,255,0.7)",
+                color: voted === "down" ? "#f87171" : "#e5534b",
                 cursor: loading || isOwnPost ? "not-allowed" : "pointer",
                 padding: "0.15rem",
                 fontSize: "0.9rem",

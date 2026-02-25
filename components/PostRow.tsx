@@ -204,7 +204,7 @@ export default function PostRow({
             style={{
               background: "none",
               border: "none",
-              color: voted === "up" ? "var(--gold)" : "var(--gold-dim)",
+              color: voted === "up" ? "#4ade80" : "#22c55e",
               cursor: loading || isOwnPost ? "not-allowed" : "pointer",
               padding: 0,
               fontSize: "1.1rem",
@@ -231,7 +231,7 @@ export default function PostRow({
             style={{
               background: "none",
               border: "none",
-              color: voted === "down" ? "#e5534b" : "var(--gold-dim)",
+              color: voted === "down" ? "#f87171" : "#e5534b",
               cursor: loading || isOwnPost ? "not-allowed" : "pointer",
               padding: 0,
               fontSize: "1.1rem",
