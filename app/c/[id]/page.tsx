@@ -11,8 +11,21 @@ export const dynamic = "force-dynamic";
 
 export default async function CategoryPage({ params }: Props) {
   const { id } = await params;
+  if (id === "all-main-page") {
+    return (
+      <CategoryContent
+        categoryId="all-main-page"
+        categoryName="Main"
+        rulesGuidelines={null}
+        defaultTab="recent"
+        isMainPage
+      />
+    );
+  }
+
   let categoryName: string;
   let rulesGuidelines: string | null = null;
+  let defaultTab: "recent" | "top" = "recent";
 
   const staticCat = getCategoryById(id);
   if (staticCat) {
@@ -22,7 +35,15 @@ export default async function CategoryPage({ params }: Props) {
     if (!dbCat) notFound();
     categoryName = dbCat.name;
     rulesGuidelines = dbCat.rulesGuidelines ?? null;
+    if (dbCat.defaultTab === "top" || dbCat.defaultTab === "recent") defaultTab = dbCat.defaultTab;
   }
 
-  return <CategoryContent categoryId={id} categoryName={categoryName} rulesGuidelines={rulesGuidelines} />;
+  return (
+    <CategoryContent
+      categoryId={id}
+      categoryName={categoryName}
+      rulesGuidelines={rulesGuidelines}
+      defaultTab={defaultTab}
+    />
+  );
 }

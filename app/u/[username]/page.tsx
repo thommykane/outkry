@@ -3,9 +3,13 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { users, posts, sessions, categoryFollows, categories } from "@/lib/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import UserPosts from "@/components/UserPosts";
+import UserSaves from "@/components/UserSaves";
+import UserConnectionsFeed from "@/components/UserConnectionsFeed";
 import AvatarUpload from "@/components/AvatarUpload";
+import ProfileConnectButton from "@/components/ProfileConnectButton";
+import UserProfileTabs from "@/components/UserProfileTabs";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -15,12 +19,14 @@ export default async function UserProfilePage({ params }: Props) {
   if (!user) notFound();
 
   let isOwnProfile = false;
+  let currentUserId: string | null = null;
   const cookieStore = await cookies();
   const sessionId = cookieStore.get("session")?.value;
   if (sessionId) {
     const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
-    if (session && new Date(session.expiresAt) > new Date() && session.userId === user.id) {
-      isOwnProfile = true;
+    if (session && new Date(session.expiresAt) > new Date()) {
+      currentUserId = session.userId;
+      if (session.userId === user.id) isOwnProfile = true;
     }
   }
 
@@ -33,15 +39,6 @@ export default async function UserProfilePage({ params }: Props) {
     })
     .from(posts)
     .where(eq(posts.authorId, user.id));
-
-  const categoryBreakdown = await db
-    .select({
-      categoryId: posts.categoryId,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(posts)
-    .where(eq(posts.authorId, user.id))
-    .groupBy(posts.categoryId);
 
   const followedCategories = await db
     .select({
@@ -86,6 +83,7 @@ export default async function UserProfilePage({ params }: Props) {
             }}
           />
         ) : null}
+        <ProfileConnectButton profileUserId={user.id} currentUserId={currentUserId} />
         {user.bio && (
           <p style={{ fontSize: "0.85rem", color: "var(--gold-dim)", marginBottom: "1rem", lineHeight: 1.4 }}>
             {user.bio}
@@ -133,19 +131,20 @@ export default async function UserProfilePage({ params }: Props) {
           <li>Average score per post: {avgScore}</li>
           <li>Highest score: {maxScore}</li>
           <li>Lowest score: {minScore}</li>
-          {categoryBreakdown.length > 0 && (
-            <li style={{ marginTop: "0.5rem" }}>
-              Categories: {categoryBreakdown.map((c) => `${c.categoryId} (${c.count})`).join(", ")}
-            </li>
-          )}
+          <li style={{ marginTop: "0.5rem" }}>
+            <Link href={`/u/${username}/stats`} style={{ color: "var(--gold)" }}>
+              See more
+            </Link>
+          </li>
         </ul>
       </div>
 
       <div style={{ flex: "1 1 100%", minWidth: 0 }}>
-        <h3 style={{ marginBottom: "1rem", color: "var(--gold)", fontSize: "1rem" }}>
-          Recent posts
-        </h3>
-        <UserPosts userId={user.id} />
+        <UserProfileTabs
+          userId={user.id}
+          currentUserId={currentUserId}
+          isOwnProfile={isOwnProfile}
+        />
       </div>
     </div>
   );

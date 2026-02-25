@@ -14,12 +14,16 @@ export default function CategoryContent({
   categoryId,
   categoryName,
   rulesGuidelines: initialRules = null,
+  defaultTab: initialTab = "recent",
+  isMainPage = false,
 }: {
   categoryId: string;
   categoryName: string;
   rulesGuidelines?: string | null;
+  defaultTab?: "recent" | "top";
+  isMainPage?: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("recent");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [sort, setSort] = useState<Sort>("newest");
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState<any[]>([]);
@@ -67,12 +71,12 @@ export default function CategoryContent({
   }, [categoryId, tab, sort, page]);
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || isMainPage) return;
     fetch(`/api/category-follows?categoryId=${categoryId}`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setFollowing(!!d.following))
       .catch(() => setFollowing(false));
-  }, [categoryId, currentUserId]);
+  }, [categoryId, currentUserId, isMainPage]);
 
   const handleFollow = async () => {
     if (!currentUserId || followLoading) return;
@@ -97,7 +101,7 @@ export default function CategoryContent({
     { key: "archived", label: "Archived" },
   ];
 
-  const IMAGE_ONLY_CATEGORIES = ["humor-funny-memes", "humor-funny-caps"];
+  const IMAGE_ONLY_CATEGORIES = ["humor-funny-memes", "humor-funny-caps", "social-beautiful-people"];
   const isImageOnlyCategory = IMAGE_ONLY_CATEGORIES.includes(categoryId);
 
   const sorts: { key: Sort; label: string }[] = [
@@ -110,6 +114,8 @@ export default function CategoryContent({
   return (
     <div style={{ maxWidth: "900px", marginLeft: "auto", marginRight: "auto", width: "100%", textAlign: "left" }}>
       <AnnouncementBanner />
+      {!isMainPage && (
+      <>
       {/* Tabs */}
       <div
         style={{
@@ -532,6 +538,47 @@ export default function CategoryContent({
         </div>
       )}
 
+      </>
+      )}
+
+      {isMainPage && totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            style={{
+              padding: "0.4rem 0.8rem",
+              background: "var(--glass)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "6px",
+              color: "var(--gold-bright)",
+              cursor: page <= 1 ? "not-allowed" : "pointer",
+              opacity: page <= 1 ? 0.5 : 1,
+            }}
+          >
+            ← Prev
+          </button>
+          <span style={{ fontSize: "0.85rem", color: "var(--gold-dim)" }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            style={{
+              padding: "0.4rem 0.8rem",
+              background: "var(--glass)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "6px",
+              color: "var(--gold-bright)",
+              cursor: page >= totalPages ? "not-allowed" : "pointer",
+              opacity: page >= totalPages ? 0.5 : 1,
+            }}
+          >
+            Next →
+          </button>
+        </div>
+      )}
+
       {/* Post rows / image grid */}
       <div className="glass-panel" style={{ padding: "1rem", background: "var(--glass-dark)" }}>
         {loading ? (
@@ -542,6 +589,72 @@ export default function CategoryContent({
           <div style={{ color: "var(--gold-dim)", padding: "2rem", textAlign: "center" }}>
             No posts yet. Be the first to post!
           </div>
+        ) : isMainPage ? (
+          <>
+            {posts.map((post) => (
+              <div key={post.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                <span
+                  style={{
+                    background: "#000",
+                    color: "#fff",
+                    padding: "0.25rem 0.5rem",
+                    fontSize: "0.8rem",
+                    flexShrink: 0,
+                    alignSelf: "stretch",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {post.categoryName ?? "—"}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <PostRow
+                    post={post}
+                    currentUserId={currentUserId}
+                    isAdmin={isAdmin}
+                    onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+                  />
+                </div>
+              </div>
+            ))}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginTop: "1rem" }}>
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  style={{
+                    padding: "0.4rem 0.8rem",
+                    background: "var(--glass)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "6px",
+                    color: "var(--gold-bright)",
+                    cursor: page <= 1 ? "not-allowed" : "pointer",
+                    opacity: page <= 1 ? 0.5 : 1,
+                  }}
+                >
+                  ← Prev
+                </button>
+                <span style={{ alignSelf: "center", fontSize: "0.85rem", color: "var(--gold-dim)" }}>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  style={{
+                    padding: "0.4rem 0.8rem",
+                    background: "var(--glass)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "6px",
+                    color: "var(--gold-bright)",
+                    cursor: page >= totalPages ? "not-allowed" : "pointer",
+                    opacity: page >= totalPages ? 0.5 : 1,
+                  }}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         ) : isImageOnlyCategory ? (
           <>
             <div style={{ display: "flex", flexDirection: "column", maxWidth: "900px" }}>

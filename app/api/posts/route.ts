@@ -1,16 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { posts, users, categoryFollows, categories } from "@/lib/db/schema";
-import { eq, desc, asc, and, gte, sql } from "drizzle-orm";
+import { posts, users, categoryFollows, categories, votes } from "@/lib/db/schema";
+import { eq, desc, asc, and, gte, sql, inArray } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { uploadToFtp, isFtpConfigured } from "@/lib/ftp-upload";
 import { uploadToBlob, isBlobConfigured } from "@/lib/blob-upload";
-import { getScoreThresholds } from "@/lib/settings";
+import { getScoreThresholds, getMainPageOrder } from "@/lib/settings";
 
 const POSTS_PER_PAGE = 20;
 const MAX_PAGES = 10;
+const ARCHIVED_POSTS_PER_PAGE = 20;
+const ARCHIVED_MAX_PAGES = 100;
+const ARCHIVED_MAX_TOTAL = 2000;
+const MAIN_PAGE_PER_CATEGORY = 40;
+const MAIN_PAGE_PER_PAGE = 20;
+const MAIN_PAGE_MAX_PAGES = 100;
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,14 +33,58 @@ export async function GET(req: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const tab = searchParams.get("tab") || "recent";
     const sort = searchParams.get("sort") || "newest";
-    const page = Math.min(parseInt(searchParams.get("page") || "1", 10), MAX_PAGES);
+    const isArchivedTab = tab === "archived";
+    const isMainPage = categoryId === "all-main-page";
+    const perPage = isArchivedTab ? ARCHIVED_POSTS_PER_PAGE : isMainPage ? MAIN_PAGE_PER_PAGE : POSTS_PER_PAGE;
+    const maxPages = isArchivedTab ? ARCHIVED_MAX_PAGES : isMainPage ? MAIN_PAGE_MAX_PAGES : MAX_PAGES;
+    const page = Math.min(parseInt(searchParams.get("page") || "1", 10), maxPages);
 
     if (!categoryId) {
       return NextResponse.json({ error: "categoryId required" }, { status: 400 });
     }
 
+    if (isMainPage) {
+      const mainOrder = await getMainPageOrder();
+      const allCats = await db.select({ id: categories.id, name: categories.name }).from(categories);
+      const { topScoreThreshold } = await getScoreThresholds();
+      const combined: (typeof posts.$inferSelect & { categoryName: string })[] = [];
+      for (const cat of allCats) {
+        if (cat.id === "all-main-page") continue;
+        const whereClause =
+          mainOrder === "top"
+            ? and(eq(posts.categoryId, cat.id), gte(posts.score, topScoreThreshold))
+            : eq(posts.categoryId, cat.id);
+        const orderBy = mainOrder === "top" ? desc(posts.score) : desc(posts.createdAt);
+        const rows = await db
+          .select()
+          .from(posts)
+          .where(whereClause)
+          .orderBy(orderBy)
+          .limit(MAIN_PAGE_PER_CATEGORY);
+        for (const r of rows) {
+          combined.push({ ...r, categoryName: cat.name } as typeof posts.$inferSelect & { categoryName: string });
+        }
+      }
+      const shuffled = shuffle(combined);
+      const total = shuffled.length;
+      const totalPages = Math.min(Math.ceil(total / MAIN_PAGE_PER_PAGE), MAIN_PAGE_MAX_PAGES);
+      const offset = (page - 1) * MAIN_PAGE_PER_PAGE;
+      const items = shuffled.slice(offset, offset + MAIN_PAGE_PER_PAGE);
+      const { users } = await import("@/lib/db/schema");
+      const postsWithAuthor = await Promise.all(
+        items.map(async (p) => {
+          const [author] = await db.select().from(users).where(eq(users.id, p.authorId)).limit(1);
+          return {
+            ...p,
+            author: author ? { username: author.username, avatarUrl: author.avatarUrl } : null,
+          };
+        })
+      );
+      return NextResponse.json({ posts: postsWithAuthor, totalPages, total });
+    }
+
     const { topScoreThreshold, archiveScore } = await getScoreThresholds();
-    const offset = (page - 1) * POSTS_PER_PAGE;
+    const offset = (page - 1) * perPage;
 
     const whereClause =
       tab === "archived"
@@ -33,6 +92,21 @@ export async function GET(req: NextRequest) {
         : tab === "top"
         ? and(eq(posts.categoryId, categoryId), gte(posts.score, topScoreThreshold))
         : eq(posts.categoryId, categoryId);
+
+    if (isArchivedTab) {
+      const archivedIds = await db
+        .select({ id: posts.id })
+        .from(posts)
+        .where(whereClause)
+        .orderBy(asc(posts.createdAt));
+      if (archivedIds.length > ARCHIVED_MAX_TOTAL) {
+        const toDelete = archivedIds.slice(0, archivedIds.length - ARCHIVED_MAX_TOTAL).map((r) => r.id);
+        if (toDelete.length > 0) {
+          await db.delete(votes).where(inArray(votes.postId, toDelete));
+          await db.delete(posts).where(inArray(posts.id, toDelete));
+        }
+      }
+    }
 
     const orderBy =
       sort === "score-desc"
@@ -48,18 +122,18 @@ export async function GET(req: NextRequest) {
       .from(posts)
       .where(whereClause)
       .orderBy(orderBy)
-      .limit(POSTS_PER_PAGE + 1)
+      .limit(perPage + 1)
       .offset(offset);
 
-    const hasMore = result.length > POSTS_PER_PAGE;
-    const items = hasMore ? result.slice(0, POSTS_PER_PAGE) : result;
+    const hasMore = result.length > perPage;
+    const items = hasMore ? result.slice(0, perPage) : result;
 
     const countResult = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(posts)
       .where(whereClause);
     const total = countResult[0]?.count ?? 0;
-    const totalPages = Math.min(Math.ceil(total / POSTS_PER_PAGE), MAX_PAGES);
+    const totalPages = Math.min(Math.ceil(total / perPage), maxPages);
 
     const { users } = await import("@/lib/db/schema");
     const postsWithAuthor = await Promise.all(
@@ -109,7 +183,7 @@ export async function POST(req: NextRequest) {
     const categoryId = formData.get("categoryId") as string;
     const file = formData.get("featuredImage") as File | null;
 
-    const imageOnlyCategories = ["humor-funny-memes", "humor-funny-caps"];
+    const imageOnlyCategories = ["humor-funny-memes", "humor-funny-caps", "social-beautiful-people"];
     const isImageOnlyCategory = categoryId && imageOnlyCategories.includes(categoryId);
 
     if (!title?.trim() || !categoryId) {

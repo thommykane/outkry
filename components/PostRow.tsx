@@ -20,16 +20,22 @@ export default function PostRow({
   currentUserId,
   isAdmin,
   onDeleted,
+  isSaved: initialSaved,
+  onSaved,
 }: {
   post: any;
   currentUserId?: string | null;
   isAdmin?: boolean;
   onDeleted?: (postId: string) => void;
+  isSaved?: boolean;
+  onSaved?: (postId: string, saved: boolean) => void;
 }) {
   const [score, setScore] = useState(post.score ?? 0);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [saved, setSaved] = useState(Boolean(initialSaved));
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const isOwnPost = Boolean(currentUserId && post.authorId === currentUserId);
   const isAnon = isAnonymousCategory(post.categoryId || "");
@@ -46,8 +52,11 @@ export default function PostRow({
       });
       const data = await res.json();
       if (res.ok) {
-        setScore(data.newScore);
-        setVoted(value === 1 ? "up" : "down");
+        if (data.deleted && onDeleted) onDeleted(post.id);
+        else {
+          setScore(data.newScore);
+          setVoted(value === 1 ? "up" : "down");
+        }
       }
     } finally {
       setLoading(false);
@@ -71,6 +80,29 @@ export default function PostRow({
       setDeleting(false);
     }
   };
+
+  const handleSave = async () => {
+    if (!currentUserId || isOwnPost || saveLoading) return;
+    setSaveLoading(true);
+    try {
+      const action = saved ? "unsave" : "save";
+      const res = await fetch("/api/saves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ postId: post.id, action }),
+      });
+      if (res.ok) {
+        const next = !saved;
+        setSaved(next);
+        onSaved?.(post.id, next);
+      }
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const showSave = Boolean(currentUserId && !isOwnPost);
 
   return (
     <div
@@ -220,6 +252,26 @@ export default function PostRow({
           >
             {post.title}
           </Link>
+          {showSave && (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saveLoading}
+              style={{
+                flexShrink: 0,
+                padding: "0.25rem 0.5rem",
+                fontSize: "0.75rem",
+                background: "transparent",
+                border: `1px solid ${saved ? "var(--gold)" : "var(--gold-dim)"}`,
+                borderRadius: "4px",
+                color: saved ? "var(--gold)" : "var(--gold-dim)",
+                cursor: saveLoading ? "not-allowed" : "pointer",
+                opacity: saveLoading ? 0.6 : 1,
+              }}
+            >
+              {saveLoading ? "…" : saved ? "Saved" : "Save"}
+            </button>
+          )}
           {isAdmin && onDeleted && (
             <button
               type="button"

@@ -2,20 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { requireAdmin } from "@/lib/admin";
+import { getAdminSessionForRead, requireAdmin } from "@/lib/admin";
 import { v4 as uuid } from "uuid";
 
 export async function GET() {
-  await requireAdmin();
+  const admin = await getAdminSessionForRead();
+  if (!admin) {
+    return NextResponse.json({ error: "Forbidden", categories: [] }, { status: 403 });
+  }
 
   const all = await db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.id));
+  const allIds = new Set(all.map((c) => c.id));
   const parents = all.filter((c) => !c.parentId).sort((a, b) => a.name.localeCompare(b.name));
+  const orphans = all.filter((c) => c.parentId && !allIds.has(c.parentId));
   const children = all.filter((c) => c.parentId);
 
-  const tree = parents.map((p) => ({
-    ...p,
-    children: children.filter((c) => c.parentId === p.id).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
-  }));
+  const tree = [
+    ...parents.map((p) => ({
+      ...p,
+      children: children.filter((c) => c.parentId === p.id).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+    })),
+    ...orphans.map((o) => ({ ...o, children: [] })),
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   return NextResponse.json({ categories: tree });
 }
@@ -24,7 +32,7 @@ export async function POST(req: NextRequest) {
   await requireAdmin();
 
   const body = await req.json();
-  const { name, parentId, menuSection } = body;
+  const { name, parentId, menuSection, defaultTab } = body;
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "name required" }, { status: 400 });
@@ -48,6 +56,7 @@ export async function POST(req: NextRequest) {
     parentId: parentId || null,
     sortOrder,
     ...(parentId ? {} : { menuSection: (typeof menuSection === "string" && menuSection.trim()) ? menuSection.trim() : "discussion" }),
+    defaultTab: defaultTab === "top" ? "top" : "recent",
   });
 
   return NextResponse.json({ success: true, id });
@@ -103,6 +112,15 @@ export async function PATCH(req: NextRequest) {
     if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     if (cat.parentId) return NextResponse.json({ error: "Only parent categories have sections" }, { status: 400 });
     await db.update(categories).set({ menuSection: menuSection.trim() }).where(eq(categories.id, categoryId));
+    return NextResponse.json({ success: true });
+  }
+
+  // Update category default tab (recent | top)
+  const defaultTab = body.defaultTab;
+  if (categoryId && (defaultTab === "recent" || defaultTab === "top")) {
+    const [cat] = await db.select().from(categories).where(eq(categories.id, categoryId)).limit(1);
+    if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    await db.update(categories).set({ defaultTab }).where(eq(categories.id, categoryId));
     return NextResponse.json({ success: true });
   }
 

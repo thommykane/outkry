@@ -5,7 +5,7 @@ import { useState, useRef } from "react";
 const MAX_WORDS = 5000;
 const MAX_LINKS = 3;
 
-const IMAGE_ONLY_CATEGORIES = ["humor-funny-memes", "humor-funny-caps"];
+const IMAGE_ONLY_CATEGORIES = ["humor-funny-memes", "humor-funny-caps", "social-beautiful-people"];
 
 function countWords(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length;

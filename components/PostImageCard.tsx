@@ -38,8 +38,11 @@ export default function PostImageCard({
       });
       const data = await res.json();
       if (res.ok) {
-        setScore(data.newScore);
-        setVoted(value === 1 ? "up" : "down");
+        if (data.deleted && onDeleted) onDeleted(post.id);
+        else {
+          setScore(data.newScore);
+          setVoted(value === 1 ? "up" : "down");
+        }
       }
     } finally {
       setLoading(false);
