@@ -914,7 +914,6 @@ export default function CategoryContent({
               backdropFilter: "blur(10px)",
               WebkitBackdropFilter: "blur(10px)",
               borderRadius: "8px",
-              perspective: "800px",
             }}
           >
             <img
@@ -922,7 +921,7 @@ export default function CategoryContent({
               alt=""
               width={125}
               height={125}
-              className="random-die-roll"
+              className="random-die-spin"
             />
           </div>
         )}

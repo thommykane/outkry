@@ -132,24 +132,15 @@ a:hover {
   border-radius: 2px;
 }
 
-@keyframes randomDieRoll {
-  0% {
-    transform: rotateX(0deg) rotateY(0deg);
+@keyframes randomDieSpin {
+  from {
+    transform: rotate(0deg);
   }
-  25% {
-    transform: rotateX(90deg) rotateY(90deg);
-  }
-  50% {
-    transform: rotateX(180deg) rotateY(180deg);
-  }
-  75% {
-    transform: rotateX(270deg) rotateY(270deg);
-  }
-  100% {
-    transform: rotateX(360deg) rotateY(360deg);
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.random-die-roll {
-  animation: randomDieRoll 1.2s linear infinite;
+.random-die-spin {
+  animation: randomDieSpin 1s linear infinite;
 }
