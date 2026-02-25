@@ -22,17 +22,24 @@ export default function Sidebar() {
       .catch(() => setUser(null));
   }, []);
 
+  const FALLBACK_SECTIONS: Section[] = [{ id: "discussion", name: "Categories", sortOrder: 0 }];
+
   function loadData() {
     const cacheBust = `_t=${Date.now()}`;
+    const safeJson = (r: Response) => r.text().then((t) => { try { return t ? JSON.parse(t) : {}; } catch { return {}; } });
     Promise.all([
-      fetch(`/api/categories?${cacheBust}`, { cache: "no-store" }).then((r) => r.json()),
-      fetch(`/api/menu-sections?${cacheBust}`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/categories?${cacheBust}`, { cache: "no-store" }).then(safeJson),
+      fetch(`/api/menu-sections?${cacheBust}`, { cache: "no-store" }).then(safeJson),
     ])
       .then(([catData, secData]) => {
-        setCategoryTree(Array.isArray(catData.tree) ? catData.tree : []);
-        setSections(Array.isArray(secData.sections) ? secData.sections : []);
+        setCategoryTree(Array.isArray(catData?.tree) ? catData.tree : []);
+        const secs = Array.isArray(secData?.sections) ? secData.sections : [];
+        setSections(secs.length > 0 ? secs : FALLBACK_SECTIONS);
       })
-      .catch(() => {});
+      .catch(() => {
+        setCategoryTree([]);
+        setSections(FALLBACK_SECTIONS);
+      });
   }
 
   useEffect(() => {
