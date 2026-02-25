@@ -141,7 +141,7 @@ export default function Header() {
           marginLeft: "0.5rem",
         }}
       >
-        Register
+        Join
       </Link>
     </header>
   );

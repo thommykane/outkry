@@ -108,7 +108,7 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Login"}
         </button>
         <p style={{ marginTop: "1rem", textAlign: "center", fontSize: "0.85rem", color: "var(--gold-dim)" }}>
-          No account? <Link href="/register">Register</Link>
+          No account? <Link href="/register">Join</Link>
         </p>
       </form>
     </div>

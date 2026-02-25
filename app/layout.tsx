@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: await getMetadataBase(),
     title: "Outkry",
-    description: "Community · Reddit · Discord · 4chan",
+    description: "Expression · Debate · Community · Ownership",
   };
 }
 
