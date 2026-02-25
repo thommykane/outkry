@@ -14,7 +14,8 @@ const MAX_PAGES = 10;
 const ARCHIVED_POSTS_PER_PAGE = 20;
 const ARCHIVED_MAX_PAGES = 100;
 const ARCHIVED_MAX_TOTAL = 2000;
-const MAIN_PAGE_POSTS_LIMIT = 200;
+const MAIN_PAGE_POSTS_LIMIT = 600;
+const MAIN_PAGE_PER_CATEGORY = 15;
 const MAIN_PAGE_PER_PAGE = 20;
 const MAIN_PAGE_MAX_PAGES = 10;
 
@@ -67,10 +68,19 @@ export async function GET(req: NextRequest) {
         .where(whereClause)
         .orderBy(orderBy)
         .limit(MAIN_PAGE_POSTS_LIMIT);
-      const combined = rows.map((r) => ({
+      const withCategoryName = rows.map((r) => ({
         ...r,
         categoryName: catNameById.get(r.categoryId) ?? "—",
       })) as (typeof posts.$inferSelect & { categoryName: string })[];
+      const byCategory = new Map<string, (typeof withCategoryName)[number][]>();
+      for (const p of withCategoryName) {
+        const list = byCategory.get(p.categoryId) ?? [];
+        if (list.length < MAIN_PAGE_PER_CATEGORY) {
+          list.push(p);
+          byCategory.set(p.categoryId, list);
+        }
+      }
+      const combined = Array.from(byCategory.values()).flat();
       const shuffled = shuffle(combined);
       const total = shuffled.length;
       const totalPages = Math.min(Math.ceil(total / MAIN_PAGE_PER_PAGE), MAIN_PAGE_MAX_PAGES);
