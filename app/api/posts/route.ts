@@ -14,7 +14,7 @@ const MAX_PAGES = 10;
 const ARCHIVED_POSTS_PER_PAGE = 20;
 const ARCHIVED_MAX_PAGES = 100;
 const ARCHIVED_MAX_TOTAL = 2000;
-const MAIN_PAGE_PER_CATEGORY = 40;
+const MAIN_PAGE_PER_CATEGORY = 15;
 const MAIN_PAGE_PER_PAGE = 20;
 const MAIN_PAGE_MAX_PAGES = 10;
 
@@ -44,43 +44,52 @@ export async function GET(req: NextRequest) {
     }
 
     if (isMainPage) {
-      const mainOrder = await getMainPageOrder();
-      const allCats = await db.select({ id: categories.id, name: categories.name }).from(categories);
-      const { topScoreThreshold } = await getScoreThresholds();
-      const combined: (typeof posts.$inferSelect & { categoryName: string })[] = [];
-      for (const cat of allCats) {
-        if (cat.id === "all-main-page") continue;
-        const whereClause =
-          mainOrder === "top"
-            ? and(eq(posts.categoryId, cat.id), gte(posts.score, topScoreThreshold))
-            : eq(posts.categoryId, cat.id);
-        const orderBy = mainOrder === "top" ? desc(posts.score) : desc(posts.createdAt);
-        const rows = await db
-          .select()
-          .from(posts)
-          .where(whereClause)
-          .orderBy(orderBy)
-          .limit(MAIN_PAGE_PER_CATEGORY);
-        for (const r of rows) {
-          combined.push({ ...r, categoryName: cat.name } as typeof posts.$inferSelect & { categoryName: string });
-        }
-      }
+      const [mainOrder, allCats, { topScoreThreshold }] = await Promise.all([
+        getMainPageOrder(),
+        db.select({ id: categories.id, name: categories.name }).from(categories),
+        getScoreThresholds(),
+      ]);
+      const cats = allCats.filter((c) => c.id !== "all-main-page");
+      const categoryChunks = await Promise.all(
+        cats.map((cat) => {
+          const whereClause =
+            mainOrder === "top"
+              ? and(eq(posts.categoryId, cat.id), gte(posts.score, topScoreThreshold))
+              : eq(posts.categoryId, cat.id);
+          const orderBy = mainOrder === "top" ? desc(posts.score) : desc(posts.createdAt);
+          return db
+            .select()
+            .from(posts)
+            .where(whereClause)
+            .orderBy(orderBy)
+            .limit(MAIN_PAGE_PER_CATEGORY)
+            .then((rows) => rows.map((r) => ({ ...r, categoryName: cat.name } as typeof posts.$inferSelect & { categoryName: string })));
+        })
+      );
+      const combined = categoryChunks.flat();
       const shuffled = shuffle(combined);
       const total = shuffled.length;
       const totalPages = Math.min(Math.ceil(total / MAIN_PAGE_PER_PAGE), MAIN_PAGE_MAX_PAGES);
       const offset = (page - 1) * MAIN_PAGE_PER_PAGE;
       const items = shuffled.slice(offset, offset + MAIN_PAGE_PER_PAGE);
-      const { users } = await import("@/lib/db/schema");
-      const postsWithAuthor = await Promise.all(
-        items.map(async (p) => {
-          const [author] = await db.select().from(users).where(eq(users.id, p.authorId)).limit(1);
-          return {
-            ...p,
-            author: author ? { username: author.username, avatarUrl: author.avatarUrl } : null,
-          };
-        })
-      );
-      return NextResponse.json({ posts: postsWithAuthor, totalPages, total });
+      const authorIds = [...new Set(items.map((p) => p.authorId))];
+      const authorMap = new Map<string | null, { username: string; avatarUrl: string | null }>();
+      if (authorIds.length > 0) {
+        const authorRows = await db
+          .select({ id: users.id, username: users.username, avatarUrl: users.avatarUrl })
+          .from(users)
+          .where(inArray(users.id, authorIds));
+        for (const u of authorRows) {
+          authorMap.set(u.id, { username: u.username, avatarUrl: u.avatarUrl });
+        }
+      }
+      const postsWithAuthor = items.map((p) => ({
+        ...p,
+        author: authorMap.get(p.authorId) ?? null,
+      }));
+      const res = NextResponse.json({ posts: postsWithAuthor, totalPages, total });
+      res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
+      return res;
     }
 
     const { topScoreThreshold, archiveScore } = await getScoreThresholds();
@@ -128,23 +137,25 @@ export async function GET(req: NextRequest) {
     const hasMore = result.length > perPage;
     const items = hasMore ? result.slice(0, perPage) : result;
 
-    const countResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(posts)
-      .where(whereClause);
+    const [countResult, authorRows] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` }).from(posts).where(whereClause),
+      items.length > 0
+        ? db
+            .select({ id: users.id, username: users.username, avatarUrl: users.avatarUrl })
+            .from(users)
+            .where(inArray(users.id, [...new Set(items.map((p) => p.authorId))]))
+        : Promise.resolve([]),
+    ]);
     const total = countResult[0]?.count ?? 0;
     const totalPages = Math.min(Math.ceil(total / perPage), maxPages);
-
-    const { users } = await import("@/lib/db/schema");
-    const postsWithAuthor = await Promise.all(
-      items.map(async (p) => {
-        const [author] = await db.select().from(users).where(eq(users.id, p.authorId)).limit(1);
-        return {
-          ...p,
-          author: author ? { username: author.username, avatarUrl: author.avatarUrl } : null,
-        };
-      })
-    );
+    const authorMap = new Map<string, { username: string; avatarUrl: string | null }>();
+    for (const u of authorRows) {
+      authorMap.set(u.id, { username: u.username, avatarUrl: u.avatarUrl });
+    }
+    const postsWithAuthor = items.map((p) => ({
+      ...p,
+      author: authorMap.get(p.authorId) ?? null,
+    }));
 
     return NextResponse.json({
       posts: postsWithAuthor,
