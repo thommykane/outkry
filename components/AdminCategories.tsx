@@ -10,6 +10,7 @@ export default function AdminCategories() {
   const [newParentId, setNewParentId] = useState("");
   const [sections, setSections] = useState<{ id: string; name: string }[]>([]);
   const [newMenuSection, setNewMenuSection] = useState("");
+  const [newDefaultTab, setNewDefaultTab] = useState<"recent" | "top">("recent");
   const [seeding, setSeeding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -40,8 +41,7 @@ export default function AdminCategories() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/categories", { credentials: "include" });
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : {};
+      const data = await res.json().catch(() => ({}));
       setCategories(data.categories || []);
     } catch {
       setCategories([]);
@@ -131,11 +131,34 @@ export default function AdminCategories() {
     }
   }
 
+  async function changeDefaultTab(catId: string, defaultTab: "recent" | "top") {
+    const res = await fetch("/api/admin/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ categoryId: catId, defaultTab }),
+    });
+    if (res.ok) {
+      setCategories((prev) =>
+        prev.map((c) => ({
+          ...c,
+          ...(c.id === catId ? { defaultTab } : {}),
+          children: c.children?.map((ch: any) => (ch.id === catId ? { ...ch, defaultTab } : ch)) ?? [],
+        }))
+      );
+      window.dispatchEvent(new Event("categories-updated"));
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed");
+    }
+  }
+
   async function handleCreate() {
     if (!newName.trim()) return;
-    const body: { name: string; parentId?: string; menuSection?: string } = {
+    const body: { name: string; parentId?: string; menuSection?: string; defaultTab?: "recent" | "top" } = {
       name: newName.trim(),
       parentId: newParentId || undefined,
+      defaultTab: newDefaultTab,
     };
     if (!newParentId) body.menuSection = newMenuSection || sections[0]?.id || "discussion";
     const res = await fetch("/api/admin/categories", {
@@ -209,7 +232,7 @@ export default function AdminCategories() {
 
   async function handleSeed() {
     setSeeding(true);
-    const res = await fetch("/api/admin/seed-categories", { method: "POST" });
+    const res = await fetch("/api/admin/seed-categories", { method: "POST", credentials: "include" });
     setSeeding(false);
     if (res.ok) {
       loadCategories();
@@ -292,6 +315,22 @@ export default function AdminCategories() {
               ))}
             </select>
           )}
+          <select
+            value={newDefaultTab}
+            onChange={(e) => setNewDefaultTab(e.target.value as "recent" | "top")}
+            style={{
+              padding: "0.5rem",
+              background: "var(--glass)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "6px",
+              color: "var(--gold-bright)",
+              fontSize: "0.85rem",
+            }}
+            title="Default tab on category page"
+          >
+            <option value="recent">Default: Most Recent</option>
+            <option value="top">Default: Highest Voted</option>
+          </select>
           <button
             onClick={handleCreate}
             style={{
@@ -415,6 +454,23 @@ export default function AdminCategories() {
                     </>
                   )}
                 </select>
+                <select
+                  value={cat.defaultTab || "recent"}
+                  onChange={(e) => changeDefaultTab(cat.id, e.target.value as "recent" | "top")}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    fontSize: "0.75rem",
+                    background: "var(--glass)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "4px",
+                    color: "var(--gold-bright)",
+                    cursor: "pointer",
+                  }}
+                  title="Default tab on category page"
+                >
+                  <option value="recent">Most Recent</option>
+                  <option value="top">Highest Voted</option>
+                </select>
                 <button
                   onClick={() => handleDelete(cat.id)}
                   disabled={!!editingId}
@@ -504,6 +560,24 @@ export default function AdminCategories() {
                           >
                             Edit
                           </button>
+                          <select
+                            value={ch.defaultTab || "recent"}
+                            onChange={(e) => { e.stopPropagation(); changeDefaultTab(ch.id, e.target.value as "recent" | "top"); }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              padding: "0.15rem 0.3rem",
+                              fontSize: "0.7rem",
+                              background: "var(--glass)",
+                              border: "1px solid var(--glass-border)",
+                              borderRadius: "4px",
+                              color: "var(--gold-bright)",
+                              cursor: "pointer",
+                            }}
+                            title="Default tab"
+                          >
+                            <option value="recent">Most Recent</option>
+                            <option value="top">Highest Voted</option>
+                          </select>
                         </>
                       )}
                       <span style={{ fontSize: "0.75rem", color: "var(--gold-dim)" }}>{ch.id}</span>
