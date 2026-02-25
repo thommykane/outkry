@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { isAnonymousCategory, getAnonymousDisplayName } from "@/lib/anonymous";
 import FeaturedImage from "@/components/FeaturedImage";
+import PostTimestamp from "@/components/PostTimestamp";
 
 const MAX_EXCERPT_CHARS = 300;
 
@@ -123,6 +124,12 @@ export default function PostRow({
           minWidth: "170px",
         }}
       >
+        {post.createdAt && (
+          <PostTimestamp
+            date={post.createdAt}
+            style={{ marginBottom: "0.35rem" }}
+          />
+        )}
         {(post.author || isAnon) && (
           isAnon ? (
             <span

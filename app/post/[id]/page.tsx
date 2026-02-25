@@ -9,6 +9,7 @@ import { isAnonymousCategory, getAnonymousDisplayName } from "@/lib/anonymous";
 import ShareButtons from "@/components/ShareButtons";
 import FeaturedImage from "@/components/FeaturedImage";
 import AdminDeletePostButton from "@/components/AdminDeletePostButton";
+import PostTimestamp from "@/components/PostTimestamp";
 
 function renderPostBody(body: string): string {
   const escaped = body
@@ -106,15 +107,20 @@ export default async function PostPage({ params }: Props) {
         {post.title}
       </h1>
       {(author || isAnon) && (
-        isAnon ? (
-          <span style={{ fontSize: "0.85rem", color: "var(--gold-dim)", marginBottom: "1rem", display: "block" }}>
-            by {displayName}
-          </span>
-        ) : (
-          <Link href={`/u/${author!.username}`} style={{ fontSize: "0.85rem", color: "var(--gold-dim)", marginBottom: "1rem", display: "block" }}>
-            by {displayName}
-          </Link>
-        )
+        <div style={{ marginBottom: "1rem" }}>
+          {isAnon ? (
+            <span style={{ fontSize: "0.85rem", color: "var(--gold-dim)", display: "block" }}>
+              by {displayName}
+            </span>
+          ) : (
+            <Link href={`/u/${author!.username}`} style={{ fontSize: "0.85rem", color: "var(--gold-dim)", display: "block" }}>
+              by {displayName}
+            </Link>
+          )}
+          {post.createdAt && (
+            <PostTimestamp date={post.createdAt} style={{ marginTop: "0.25rem" }} />
+          )}
+        </div>
       )}
       <div
         style={{
