@@ -16,7 +16,7 @@ const ARCHIVED_MAX_PAGES = 100;
 const ARCHIVED_MAX_TOTAL = 2000;
 const MAIN_PAGE_PER_CATEGORY = 40;
 const MAIN_PAGE_PER_PAGE = 20;
-const MAIN_PAGE_MAX_PAGES = 100;
+const MAIN_PAGE_MAX_PAGES = 10;
 
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];
