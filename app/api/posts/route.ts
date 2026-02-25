@@ -14,7 +14,7 @@ const MAX_PAGES = 10;
 const ARCHIVED_POSTS_PER_PAGE = 20;
 const ARCHIVED_MAX_PAGES = 100;
 const ARCHIVED_MAX_TOTAL = 2000;
-const MAIN_PAGE_PER_CATEGORY = 15;
+const MAIN_PAGE_POSTS_LIMIT = 200;
 const MAIN_PAGE_PER_PAGE = 20;
 const MAIN_PAGE_MAX_PAGES = 10;
 
@@ -49,31 +49,35 @@ export async function GET(req: NextRequest) {
         db.select({ id: categories.id, name: categories.name }).from(categories),
         getScoreThresholds(),
       ]);
-      const cats = allCats.filter((c) => c.id !== "all-main-page");
-      const categoryChunks = await Promise.all(
-        cats.map((cat) => {
-          const whereClause =
-            mainOrder === "top"
-              ? and(eq(posts.categoryId, cat.id), gte(posts.score, topScoreThreshold))
-              : eq(posts.categoryId, cat.id);
-          const orderBy = mainOrder === "top" ? desc(posts.score) : desc(posts.createdAt);
-          return db
-            .select()
-            .from(posts)
-            .where(whereClause)
-            .orderBy(orderBy)
-            .limit(MAIN_PAGE_PER_CATEGORY)
-            .then((rows) => rows.map((r) => ({ ...r, categoryName: cat.name } as typeof posts.$inferSelect & { categoryName: string })));
-        })
-      );
-      const combined = categoryChunks.flat();
+      const catIds = allCats.filter((c) => c.id !== "all-main-page").map((c) => c.id);
+      const catNameById = new Map(allCats.map((c) => [c.id, c.name]));
+      if (catIds.length === 0) {
+        const res = NextResponse.json({ posts: [], totalPages: 1, total: 0 });
+        res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
+        return res;
+      }
+      const whereClause =
+        mainOrder === "top"
+          ? and(inArray(posts.categoryId, catIds), gte(posts.score, topScoreThreshold))
+          : inArray(posts.categoryId, catIds);
+      const orderBy = mainOrder === "top" ? desc(posts.score) : desc(posts.createdAt);
+      const rows = await db
+        .select()
+        .from(posts)
+        .where(whereClause)
+        .orderBy(orderBy)
+        .limit(MAIN_PAGE_POSTS_LIMIT);
+      const combined = rows.map((r) => ({
+        ...r,
+        categoryName: catNameById.get(r.categoryId) ?? "—",
+      })) as (typeof posts.$inferSelect & { categoryName: string })[];
       const shuffled = shuffle(combined);
       const total = shuffled.length;
       const totalPages = Math.min(Math.ceil(total / MAIN_PAGE_PER_PAGE), MAIN_PAGE_MAX_PAGES);
       const offset = (page - 1) * MAIN_PAGE_PER_PAGE;
       const items = shuffled.slice(offset, offset + MAIN_PAGE_PER_PAGE);
       const authorIds = [...new Set(items.map((p) => p.authorId))];
-      const authorMap = new Map<string | null, { username: string; avatarUrl: string | null }>();
+      const authorMap = new Map<string, { username: string; avatarUrl: string | null }>();
       if (authorIds.length > 0) {
         const authorRows = await db
           .select({ id: users.id, username: users.username, avatarUrl: users.avatarUrl })
