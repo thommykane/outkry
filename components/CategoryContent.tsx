@@ -592,22 +592,38 @@ export default function CategoryContent({
         ) : isMainPage ? (
           <>
             {posts.map((post) => (
-              <div key={post.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                <span
+              <div
+                key={post.id}
+                style={{
+                  position: "relative",
+                  marginBottom: "0.75rem",
+                  paddingTop: "1.5rem",
+                  paddingLeft: "0.5rem",
+                }}
+              >
+                <div
                   style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
                     background: "#000",
                     color: "#fff",
-                    padding: "0.25rem 0.5rem",
-                    fontSize: "0.8rem",
-                    flexShrink: 0,
-                    alignSelf: "stretch",
-                    display: "flex",
-                    alignItems: "center",
+                    padding: "0.35rem 0.75rem 0.4rem 0.5rem",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    clipPath: "polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+                    boxShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+                    maxWidth: "160px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
+                  title={post.categoryName ?? ""}
                 >
                   {post.categoryName ?? "—"}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                </div>
+                <div style={{ minWidth: 0 }}>
                   <PostRow
                     post={post}
                     currentUserId={currentUserId}
