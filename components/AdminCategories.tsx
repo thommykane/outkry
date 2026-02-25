@@ -245,11 +245,17 @@ export default function AdminCategories() {
 
   async function handleSeed() {
     setSeeding(true);
-    const res = await fetch("/api/admin/seed-categories", { method: "POST" });
-    setSeeding(false);
-    if (res.ok) {
-      loadCategories();
-      window.dispatchEvent(new Event("categories-updated"));
+    try {
+      const res = await fetch("/api/admin/seed-categories", { method: "POST", credentials: "include" });
+      if (res.ok) {
+        await loadCategories();
+        window.dispatchEvent(new Event("categories-updated"));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || `Seed failed (${res.status})`);
+      }
+    } finally {
+      setSeeding(false);
     }
   }
 

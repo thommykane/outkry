@@ -3,10 +3,13 @@ import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { CATEGORY_TREE } from "@/lib/categories";
-import { requireAdmin } from "@/lib/admin";
+import { getAdminSession } from "@/lib/admin";
 
 export async function POST() {
-  await requireAdmin();
+  const admin = await getAdminSession();
+  if (!admin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   for (const cat of CATEGORY_TREE) {
     const parentExists = (await db.select().from(categories).where(eq(categories.id, cat.id))).length > 0;
